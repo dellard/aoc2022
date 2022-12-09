@@ -1,10 +1,30 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022 -- day 9
+
+See https://adventofcode.com/2022/day/9
+"""
+
 import sys
 
-def reader():
 
-    moves = list()
+def reader():
+    """
+    Read the input moves from stdin
+
+    Each line has two columns: a character that
+    represents the direction (R, L, U, or D for
+    right, left, up, and down) followed by a
+    positive integer representing the count of steps
+    to take in that direction.  Return a list of
+    direction, count pairs.
+
+    Absolutely no error checking whatsoever is done.
+    GIGO.
+    """
+
+    moves = []
 
     for line in sys.stdin:
         (direction, steps_s) = line.strip().split()
@@ -16,6 +36,15 @@ def reader():
 
 
 def move_one(head, tail, direction):
+    """
+    Move the head one step in the given direction,
+    update the tail position if necessary, and return
+    the updated positions of the head and tail
+
+    Note that this is only used in the solution for
+    the first part, because it assumes that there's
+    only a head and tail, and no intermediate knots
+    """
 
     new_head = move_head(head, direction)
     new_tail = move_tail(new_head, tail)
@@ -24,65 +53,80 @@ def move_one(head, tail, direction):
 
 
 def move_head(head, direction):
+    """
+    Return the result of moving the head one step
+    in the given direction
+    """
 
-    if direction == 'U':
+    if direction == 'R':
+        inc = (1, 0)
+    elif direction == 'L':
+        inc = (-1, 0)
+    elif direction == 'U':
         inc = (0, 1)
     elif direction == 'D':
         inc = (0, -1)
-    elif direction == 'L':
-        inc = (-1, 0)
-    elif direction == 'R':
-        inc = (1, 0)
-    else:
-        print('Ooops 1')
 
     new_head = head[0] + inc[0], head[1] + inc[1]
 
     return new_head
 
+
 def move_tail(head, tail):
+    """
+    Given a new position for the head, and the current
+    position of the tail, update the tail to move closer
+    to the head and return the new position of the tail
+
+    Note that if the tail is already "near" to the
+    head, then no move is necessary and the tail remains
+    where it is.
+
+    Note that no error checking is done to ensure that
+    the head and tail are in valid positions relative to
+    each other.
+    """
 
     diff = head[0] - tail[0], head[1] - tail[1]
     near = abs(diff[0]), abs(diff[1])
 
-    if head == tail:
-        #print('overlap')
-        new_tail = tail
-    elif near in [(0, 1), (1, 0), (1, 1)]:
-        #print('close enough')
-        new_tail = tail
+    if near in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+        return tail
+
+    if diff[0] and diff[1]:
+        # if both elements of diff are non-zero, then
+        # it's a diagonal move
+        diag = 1 if diff[0] > 0 else -1, 1 if diff[1] > 0 else -1
+
+        new_tail = tail[0] + diag[0], tail[1] + diag[1]
     else:
-        if diff[0] * diff[1]:
-            # it's a diagonal move
-            diag = 1 if diff[0] > 0 else -1, 1 if diff[1] > 0 else -1
-            #print('diagonal %s' % str(diag))
-            new_tail = tail[0] + diag[0], tail[1] + diag[1]
+        # at this point, it must be a vertical or
+        # horizontal move
+
+        if diff[0] > 0:
+            inc = (1, 0)
+        elif diff[0] < 0:
+            inc = (-1, 0)
+        elif diff[1] > 0:
+            inc = (0, 1)
         else:
-            #print('straight')
+            inc = (0, -1)
 
-            if diff[0] > 0:
-                inc = (1, 0)
-            elif diff[0] < 0:
-                inc = (-1, 0)
-            elif diff[1] > 0:
-                inc = (0, 1)
-            else:
-                inc = (0, -1)
-
-            # print('inc = %s' % str(inc))
-            new_tail = tail[0] + inc[0], tail[1] + inc[1]
-            # it's a straight move
-
-    #print('%s, %s -> %s %s' % (head, tail, new_head, new_tail))
+        new_tail = tail[0] + inc[0], tail[1] + inc[1]
 
     return new_tail
 
 
 def make_move1(head, tail, move, visited):
+    """
+    Make a move for part 1
+
+    For part 1, there is only a head and tail
+    """
 
     direction, steps = move
 
-    #print('direction %s steps %d' % (direction, steps))
+    # print('direction %s steps %d' % (direction, steps))
 
     visited.add(tail)
 
@@ -94,10 +138,16 @@ def make_move1(head, tail, move, visited):
 
 
 def make_move2(knots, move, visited):
+    """
+    Make a move for part 2
+
+    For part 2, there may be any number of knots
+
+    Note: this code assumes that there is at least
+    one knot, which is treated as a head.
+    """
 
     direction, steps = move
-
-    #print('direction %s steps %d' % (direction, steps))
 
     # not necessary, for the current conditions where
     # the knots all start together, but doesn't hurt
@@ -122,6 +172,14 @@ def make_move2(knots, move, visited):
 
 
 def part1(moves, start):
+    """
+    Solution for part 1 -- move the head according
+    to the list of moves, and return the number of
+    unique positions occupied by the tail as it
+    drags behind the head
+
+    Both the head and tail begin at the start position
+    """
 
     visited = set()
 
@@ -135,6 +193,15 @@ def part1(moves, start):
 
 
 def part2(moves, start, n_knots):
+    """
+    Solution for part 2 -- move the head according
+    to the list of moves, and then drag the following
+    knots behind it, and return the number of unique
+    positions occupied by the tail (the last knot)
+
+    All the knots (including the head and tail) begin
+    at the start position
+    """
 
     visited = set()
 
@@ -147,6 +214,9 @@ def part2(moves, start, n_knots):
 
 
 def main():
+    """
+    Execute the different parts; print the results
+    """
 
     moves = reader()
 
