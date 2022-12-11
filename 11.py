@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import re
 import sys
 
@@ -32,24 +33,27 @@ class Monkey():
         else:
             return old_worry + operand
 
-    def do_turn(self, monkeys):
+    def do_turn(self, monkeys, worry_factor=3, modulus=0):
 
         to_inspect = len(self.worries)
 
         while self.worries:
             worry = self.worries.pop(0)
             new_worry = self.new_worry(worry)
-            bored_worry = int(new_worry / 3)
+            bored_worry = new_worry // worry_factor
+
+            if modulus:
+                bored_worry %= modulus
 
             if (bored_worry % self.test) == 0:
-                print('is div so %d' % self.action_t)
+                #print('is div so %d' % self.action_t)
                 dest = self.action_t
             else:
-                print('is NOT so %d' % self.action_f)
+                #print('is NOT so %d' % self.action_f)
                 dest = self.action_f
 
-            print('worry %d -> %d %d [%d] tossed to %d' %
-                  (worry, new_worry, bored_worry, self.test, dest))
+            #print('worry %d -> %d %d [%d] tossed to %d' %
+            #      (worry, new_worry, bored_worry, self.test, dest))
 
             monkeys[dest].worries.append(bored_worry)
 
@@ -136,31 +140,63 @@ def reader():
     return monkeys
 
 
-def do_round(monkeys):
+def do_round(monkeys, worry_factor=3, modulus=0):
 
     for monkey in monkeys:
-        monkey.do_turn(monkeys)
-
-    for monkey in monkeys:
-        print(monkey)
+        monkey.do_turn(
+                monkeys, worry_factor=worry_factor, modulus=modulus)
 
 
 def main():
 
-    monkeys = reader()
+    monkeys1 = reader()
+    monkeys1a = copy.deepcopy(monkeys1)
+    monkeys2 = copy.deepcopy(monkeys1)
+    monkeys2a = copy.deepcopy(monkeys1)
 
-    for monkey in monkeys:
-        print(monkey)
-        monkey.print_worries()
+    modulus = 1
+    for monkey in monkeys1:
+        modulus *= monkey.test
 
     for i in range(20):
-        do_round(monkeys)
+        do_round(monkeys1)
 
     print('== == == ==')
-    inspections = sorted([m.inspections for m in monkeys])
+    inspections = [m.inspections for m in monkeys1]
+    print('inspections %s' % inspections)
+    inspections = sorted(inspections)
     business = inspections[-1] * inspections[-2]
     print('part 1: %d' % business)
 
+    for i in range(20):
+        do_round(monkeys1a, modulus=modulus)
+
+    print('== == == ==')
+    inspections = [m.inspections for m in monkeys1a]
+    print('inspections %s' % inspections)
+    inspections = sorted(inspections)
+    business = inspections[-1] * inspections[-2]
+    print('part 1a: %d' % business)
+
+    for i in range(20):
+        do_round(monkeys2, worry_factor=1, modulus=modulus)
+
+    print('== == == ==')
+    inspections = [m.inspections for m in monkeys2]
+    print('inspections %s' % inspections)
+    inspections = sorted(inspections)
+    business = inspections[-1] * inspections[-2]
+    print('part 2: %d' % business)
+
+    for i in range(10000):
+        do_round(monkeys2a, worry_factor=1, modulus=modulus)
+
+    print('== == == ==')
+    inspections = [m.inspections for m in monkeys2a]
+    print('inspections %s' % inspections)
+    inspections = sorted(inspections)
+    business = inspections[-1] * inspections[-2]
+    print('part 2a: %d' % business)
 
 
 if __name__ == '__main__':
