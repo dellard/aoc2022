@@ -3,6 +3,7 @@
 import copy
 import sys
 
+
 class Cave:
 
     def __init__(self, min_x, max_x, min_y, max_y):
@@ -15,17 +16,11 @@ class Cave:
         for _ in range(max_y + 1):
             self.grid.append(['.'] * (1 + max_x - min_x))
 
-        self.print_grid()
-
     def print_grid(self):
         for r in self.grid:
             print(''.join(r))
 
     def set_grid(self, x, y, val):
-
-        # print('set %d, %d' % (x, y))
-        # print('min %d, %d' % (self.min_x, self.min_y))
-        # print('rep %d, %d' % (x - self.min_x, y - self.min_y))
         self.grid[y - self.min_y][x - self.min_x] = val
 
     def get_grid(self, x, y):
@@ -68,40 +63,44 @@ def reader():
 
     cave = Cave(min_x, max_x, min_y, max_y)
 
-    #print('(%d, %d) (%d, %d)' % (Cave.MIN_X, Cave.MIN_Y, Cave.MAX_X, Cave.MAX_Y))
-
+    # TODO: Should be a method in Cave
+    #
     for path in all_paths:
         curr_x, curr_y = path[0]
-        #print('start (%d, %d)' % (curr_x, curr_y))
 
         for next_x, next_y in path[1:]:
-            #print('next (%d, %d)' % (next_x, next_y))
             if curr_x == next_x:
                 for y in range(
                         min(next_y, curr_y), 1 + max(next_y, curr_y), 1):
                     cave.set_grid(curr_x, y, '#')
-                    #print('filling (%d, %d)' % (curr_x, y))
             else:
                 for x in range(
                         min(next_x, curr_x), 1 + max(next_x, curr_x), 1):
                     cave.set_grid(x, curr_y, '#')
-                    #print('filling (%d, %d)' % (x, curr_y))
 
             curr_x, curr_y = next_x, next_y
 
-    #return all_paths, grid
     return cave
 
 
-def fill_grid(cave, hole_x, hole_y, stop_at_bottom=True):
+def fill_grid(cave, hole_x, hole_y):
 
     curr_x, curr_y = hole_x, hole_y
 
+    # Are we jammed at the hole itself?
+    #
+    if cave.get_grid(hole_x, hole_y) != '.':
+        return 0
+
     while True:
         if curr_y == cave.max_y:
-            # We have reached the bottom
-            return 'FULL'
+            # We have reached the bottom; the sand will
+            # not remain in the cave
+            #
+            return 0
 
+        # Try down, then left+down, the right+down
+        #
         if cave.get_grid(curr_x, curr_y + 1) == '.':
             curr_y += 1
         elif cave.get_grid(curr_x - 1, curr_y + 1) == '.':
@@ -112,19 +111,17 @@ def fill_grid(cave, hole_x, hole_y, stop_at_bottom=True):
             curr_x += 1
         else:
             cave.set_grid(curr_x, curr_y, 'o')
-            break
-
-    # We're jammed at the starting hole
-    if (curr_x, curr_y) == (hole_x, hole_y):
-        return 'FULL'
-    else:
-        return 'UNFULL'
+            return 1
 
 
-def part1(cave, stop_at_bottom=True):
+def part1(cave, hole_x=500):
+
+    # Destructive; need to make a copy
+    #
+    cave = copy.deepcopy(cave)
 
     counter = 0
-    while fill_grid(cave, 500, 0, stop_at_bottom) != 'FULL':
+    while fill_grid(cave, hole_x, 0):
         # cave.print_grid()
         counter += 1
 
@@ -133,9 +130,12 @@ def part1(cave, stop_at_bottom=True):
 
 def part2(cave, hole_x=500):
     """
-    We need to fatten out the grid
+    We need to expand the grid; bash together a new
+    cave with fatter dimensions, using a sequence of
+    shameful shortcuts
 
-    The fullest that the grid can get is a triangle
+    The new cave is 2 rows deeper than the original,
+    and the "fullest" that the grid can get is a triangle
     from the hole to the base, where the extent along
     the base is equal to the height in each direction,
     plus one.
@@ -156,6 +156,7 @@ def part2(cave, hole_x=500):
     else:
         suffix_len = 0
 
+    # Cringe
     for i in range(len(deeper_cave.grid)):
         pref = ['.'] * prefix_len
         suff = ['.'] * suffix_len
@@ -168,28 +169,17 @@ def part2(cave, hole_x=500):
     deeper_cave.max_x = new_max_x
     deeper_cave.max_y = cave.max_y + 2
 
-    # deeper_cave.print_grid()
+    cnt = part1(deeper_cave)
 
-    cnt = part1(deeper_cave, stop_at_bottom=False)
-    # deeper_cave.print_grid()
-
-    # the last bit of sand returns FULL, but it still counts
-    #
-    # NOTE: this assumes that the hole isn't filled at the
-    # start; that would be embarassing
-    #
-    return 1 + cnt
+    return cnt
 
 
 def main():
 
-    cave  = reader()
-    # print('(%d, %d) (%d, %d)' % (Cave.MIN_X, Cave.MIN_Y, Cave.MAX_X, Cave.MAX_Y))
+    cave = reader()
 
-    #print_grid(grid)
-
-    print('part 1: %d' % part1(copy.deepcopy(cave)))
-    print('part 2: %d' % part2(copy.deepcopy(cave)))
+    print('part 1: %d' % part1(cave))
+    print('part 2: %d' % part2(cave))
 
 
 main()
