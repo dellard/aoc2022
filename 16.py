@@ -3,6 +3,15 @@
 import re
 import sys
 
+class Valve:
+
+    def __init__(self, name, vrate, neighbors):
+
+        self.name = name
+        self.rate = vrate
+        self.neighbors = neighbors
+        self.closed = True
+
 
 def reader():
 
@@ -15,20 +24,10 @@ def reader():
         vrate = int(re.findall(r'-*\d+', tokens[4])[0])
         vleads = [re.sub(',', '', lead.strip()) for lead in tokens[9:]]
 
-        valves[vname] = (vname, vrate, vleads)
+        valves[vname] = Valve(vname, vrate, vleads)
 
     return valves
 
-
-def sum_open(valves, valve_states):
-
-    total = 0
-
-    for valve in valves:
-        if valve_states[valve]:
-            total += valves[valve][1]
-
-    return total
 
 def log_state(valves, valve_states, minute, pressure):
     return '\n== Minute %d ==\nValves %s are open, releasing %d pressure' % (
@@ -37,43 +36,49 @@ def log_state(valves, valve_states, minute, pressure):
 
 
 def part1_search(
-        curr, valves, valve_states, minutes_remaining, path_so_far, sequence):
+        curr, valves, minutes_remaining, curr_flow,
+        path_so_far, sequence):
 
     # At each timestep, we can either move to another valve
     # immediately (which takes one minute) or open the current valve
     # if it's closed (which takes a minute)
 
-    flow_this_minute = sum_open(valves, valve_states)
-    #sequence.append(
-    #        log_state(valves, valve_states, 30 - minutes_remaining, flow_this_minute))
-
     if minutes_remaining == 0:
         # print('curr BASE %s' % curr)
-        print('====')
-        print('\n'.join(sequence))
+        #print('====')
+        #print('\n'.join(sequence))
         return 0
 
-    # Is there ever any reason to not open a valve with
-    # a non-zero rate as soon as we reach it?
+    best_score = 0
+
+    # If a valve is closed, it takes one minute to open it.
+    # This means that it might make sense to skip opening
+    # and use that minute to move to another valve that
+    # has a higher rate
     #
-    if valve_states[curr] == False and valves[curr][1] > 0:
+    if valves[curr].closed and valves[curr].rate > 0:
 
-        valve_states[curr] = True
-
+        #sequence.append(
+        #        log_state(valves, valve_states,
+        #                  30 - minutes_remaining, curr_flow))
         #sequence.append('You open valve %s.' % curr)
 
+        new_flow = curr_flow + valves[curr].rate
+        valves[curr].closed = False
         score = part1_search(
-                curr, valves, valve_states, minutes_remaining - 1, [], sequence)
+                curr, valves,
+                minutes_remaining - 1,
+                new_flow, [], sequence)
+        valves[curr].closed = True
 
         #sequence.pop()
         #sequence.pop()
 
-        valve_states[curr] = False
+        if best_score < score:
+            best_score = score
 
-        return flow_this_minute + score
+    for next_valve in valves[curr].neighbors:
 
-    best_score = 0
-    for next_valve in valves[curr][2]:
         # observation: it just wastes time to loop around to
         # some place that we've already seen, unless we open
         # a valve somewhere along the way
@@ -88,17 +93,20 @@ def part1_search(
         #sequence.append('at valve %s at %d release %d' % (
         #    next_valve, 30 - minutes_remaining, flow_this_minute))
 
-        #sequence.append('You move to valve %s' % next_valve)
+        #sequence.append(
+        #        log_state(valves, valve_states,
+        #                  30 - minutes_remaining, curr_flow))
+        #sequence.append('You move to valve %s.' % next_valve)
         score = part1_search(
-                next_valve, valves, valve_states, minutes_remaining - 1,
-                path_so_far + [next_valve], sequence)
+                next_valve, valves, minutes_remaining - 1,
+                curr_flow, path_so_far + [next_valve], sequence)
         #sequence.pop()
+        #sequence.pop()
+
         if score > best_score:
             best_score = score
 
-    #sequence.pop()
-
-    return flow_this_minute + best_score
+    return curr_flow + best_score
 
 
 def main():
@@ -109,7 +117,7 @@ def main():
     print(valve_states)
 
     path = []
-    x = part1_search('AA', valves, valve_states, 30, [], [])
+    x = part1_search('AA', valves, 30, 0, [], [])
     print(x)
     print(path)
 
