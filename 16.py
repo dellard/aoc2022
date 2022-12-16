@@ -9,9 +9,10 @@ class CaveMap:
     def __init__(self, valves):
         self.valves = valves
 
-    def simplify(self):
+    def simplify(self, root_name='AA'):
 
-        working_valves = [copy.deepcopy(v) for v in self.valves if v.rate > 0]
+        working_valves = [copy.deepcopy(v) for v in self.valves.values()
+                          if v.name == root_name or v.rate > 0]
 
         for start_valve in working_valves:
             start_valve.neighbors = []
@@ -21,17 +22,40 @@ class CaveMap:
                     continue
 
                 start_valve.neighbors.append(
-                        self.find_shortest(start_valve, end_valve))
+                        (end_valve.name,
+                         self._find_shortest_plen(start_valve, end_valve)))
 
-        self.valves = working_valves
+        self.valves = {v.name : v for v in working_valves}
 
-    def find_shortest(self, start, end):
+    def _find_shortest_plen(self, start, end):
+
         # I'm certain I was supposed to learn this in class.
         # Or maybe teach this in class.
         #
-        # But I'm just going to make the attempt
-        # 
-        pass
+        # But I'm just going to blunder through it.
+
+        s_name = start.name
+        e_name = end.name
+
+        reached = set([s_name])
+
+        states = [[start.name]]
+
+        while states and e_name not in reached:
+            path = states.pop()
+
+            last_name = path[-1]
+            for name, distance in self.valves[last_name].neighbors:
+                if name == e_name:
+                    return len(path)
+                elif name not in reached:
+                    states.append(path + [name])
+                    reached.add(name)
+                else:
+                    continue
+
+        print('OOPS: unreachable?')
+        return -1
 
 
 class Valve:
@@ -115,7 +139,7 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
         # print('LENQ %d' % len(search_queue))
 
         cand = search_queue.pop()
-        # print('CAND ', cand)
+        print('CAND ', cand)
         (vname, minutes, curr_flow, minutes_needed, total_flow,
                 open_v, path_since_turn) = cand
 
@@ -181,8 +205,8 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
             search_queue.append(next_step)
 
         for neighbor, distance in valve.neighbors:
-            # print('PST ', path_since_turn)
-            # print('DISTANCE %d' % distance)
+            print('PST ', path_since_turn)
+            print('N %s DISTANCE %d' % (neighbor, distance))
 
             if neighbor not in path_since_turn:
                 next_step = (
@@ -285,8 +309,15 @@ def main():
     #total_flow = part1_dfs('AA', valves, 30, 0, [], [])
     #print('part 1: %d' % total_flow)
 
-    total_flow = part1_bfs('AA', valves, 30)
-    print('part 1a: %d' % total_flow)
+    #total_flow = part1_bfs('AA', valves, 30)
+    #print('part 1a: %d' % total_flow)
+
+    cm = CaveMap(valves)
+    #cm.simplify()
+    #print('cm ', cm.valves)
+
+    total_flow = part1_bfs('AA', cm.valves, 30)
+    print('part 1b: %d' % total_flow)
 
 
 if __name__ == '__main__':
