@@ -6,40 +6,43 @@ import sys
 
 class CaveMap:
 
-    def __init__(self, valves):
+    def __init__(self, valves, root_name='AA'):
+
         self.valves = valves
+        self.paths = self.find_paths(root_name=root_name)
 
-    def simplify(self, root_name='AA'):
+    def find_paths(self, root_name='AA'):
 
-        working_valves = [copy.deepcopy(v) for v in self.valves.values()
-                          if v.name == root_name or v.rate > 0]
+        paths = {}
+        working_valves = [name for name, val in self.valves.items()
+                          if val.rate > 0]
 
-        for start_valve in working_valves:
-            start_valve.neighbors = []
+        for start in working_valves:
+            paths[start] = []
 
-            for end_valve in working_valves:
-                if start_valve == end_valve:
-                    continue
+            for end in working_valves:
+                if start != end:
+                    paths[start].append(
+                            (end, self._shortest_plen(start, end)))
 
-                start_valve.neighbors.append(
-                        (end_valve.name,
-                         self._find_shortest_plen(start_valve, end_valve)))
+        if root_name not in paths:
+            paths[root_name] = []
+            for end in working_valves:
+                paths[root_name].append(
+                        (end, self._shortest_plen(root_name, end)))
 
-        self.valves = {v.name : v for v in working_valves}
+        return paths
 
-    def _find_shortest_plen(self, start, end):
+    def _shortest_plen(self, s_name, e_name):
 
         # I'm certain I was supposed to learn this in class.
         # Or maybe teach this in class.
         #
         # But I'm just going to blunder through it.
 
-        s_name = start.name
-        e_name = end.name
-
         reached = set([s_name])
 
-        states = [[start.name]]
+        states = [[s_name]]
 
         while states and e_name not in reached:
             path = states.pop()
@@ -86,6 +89,64 @@ def reader():
         valves[vname] = Valve(vname, vrate, vleads)
 
     return valves
+
+
+def extend(cave, node, path, flow, minutes):
+
+    spacer = ' ' * (30 - minutes)
+    print('%s %s flow %d mins %d %s' %
+          (spacer, node, flow, minutes, str(path)))
+
+    if minutes <= 0:
+        return flow
+
+    # If we don't change any more valves,
+    # this is how much will flow during the
+    # remaining minutes
+    #
+    base_score = flow
+
+    # How much we can improve the score by
+    # opening a given valve
+    #
+    inc_score = 0
+    highest_inc_score = base_score
+
+    neighbors = cave.paths[node]
+    for neighbor, distance in neighbors:
+        if distance >= minutes:
+            continue
+
+        if neighbor in path:
+            continue
+
+        added_rate = cave.valves[neighbor].rate
+        added_flow = added_rate * ((minutes - 1) - distance)
+        print('added flow %d rate %d' % (added_flow, added_rate))
+        inc_score = extend(
+                cave, neighbor, path + [neighbor],
+                flow + added_flow, (minutes - 1) - distance)
+
+        highest_inc_score = max(inc_score, highest_inc_score)
+
+    # print('best %d %s' % (highest_inc_score, str(path)))
+
+    return highest_inc_score
+
+
+def solver_pt1(cave, start='AA', minutes=30):
+
+    # Examine every path through valves that can be traversed,
+    # including the time required to open the valve, in the
+    # time alloted, and then evaluate the total flow that
+    # would result, and see whether it is better than the
+    # highest flow we've found so far
+    #
+    # This might blow up for the big cases.  We'll see.
+
+    highest = extend(cave, start, [start], 0, minutes)
+    return highest
+
 
 
 def log_state(valves, valve_states, minute, pressure):
@@ -277,7 +338,7 @@ def part2_bfs_worker(curr0, curr1, valves, minutes_remaining, search_state):
         # print('v %s m %d c %d t %d' % (vname, minutes, curr_flow, total_flow))
 
         if minutes <= 0:
-            print('MINUTES <= 0')
+            # print('MINUTES <= 0')
             final_total = total_flow + curr_flow # WHA?
             #print('T vname %s total %d' % (vname, total_flow))
             if final_total > highest_total:
@@ -349,13 +410,14 @@ def main():
     #print('part 1a: %d' % total_flow)
 
     cm = CaveMap(valves)
-    #cm.simplify()
-    #print('cm ', cm.valves)
 
-    #total_flow = part1_bfs('AA', cm.valves, 30)
-    #print('part 1b: %d' % total_flow)
+    for elem in cm.paths:
+        print('node ', elem, ' ', str(cm.paths[elem]))
 
-    cm = CaveMap(valves)
+    print('Ex ', solver_pt1(cm, start='AA', minutes=30))
+
+    sys.exit(0)
+
     total_flow = part2_bfs('AA', 'AA', cm.valves, 26)
     print('part 2: %d' % total_flow)
 
