@@ -139,7 +139,7 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
         # print('LENQ %d' % len(search_queue))
 
         cand = search_queue.pop()
-        print('CAND ', cand)
+        # print('CAND ', cand)
         (vname, minutes, curr_flow, minutes_needed, total_flow,
                 open_v, path_since_turn) = cand
 
@@ -174,18 +174,6 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
 
         valve = valves[vname]
 
-        """
-        # don't keep pushing the same stuff
-        #
-        rep = str(next_step)
-        if rep not in already:
-            already.add(rep)
-            search_queue.append(next_step)
-        else:
-            # print('omitting duplicate: %s' % rep)
-            pass
-        """
-
         if valve.rate >= 0 and vname not in open_v:
             # If this valve isn't open on this path,
             # add a state where we open it.
@@ -215,7 +203,20 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
                         distance,
                         total_flow,
                         open_v, path_since_turn + [neighbor])
-                search_queue.append(next_step)
+                # search_queue.append(next_step)
+
+                """
+                # don't keep pushing the same stuff
+                #
+                rep = str(next_step)
+                if rep not in already:
+                    already.add(rep)
+                    search_queue.append(next_step)
+                else:
+                    print('OMIT duplicate: %s' % rep)
+                    pass
+                """
+
             else:
                 #print('skipping path %s + %s' % (str(path_since_turn), vname))
                 pass
@@ -223,81 +224,116 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
     return highest_total
 
 
-def part1_dfs(
-        curr, valves, minutes_remaining, curr_flow,
-        path_so_far, sequence):
+def part2_bfs(curr0, curr1, valves, minutes_remaining):
 
-    # At each timestep, we can either move to another valve
-    # immediately (which takes one minute) or open the current valve
-    # if it's closed (which takes a minute)
-
-    if minutes_remaining == 0:
-        # print('curr BASE %s' % curr)
-        #print('====')
-        #print('\n'.join(sequence))
-        return 0
-
-    best_score = 0
-
-    # If a valve is closed, it takes one minute to open it.
-    # This means that it might make sense to skip opening
-    # and use that minute to move to another valve that
-    # has a higher rate
+    # The search state allows us to prune the search:
+    # Whenever we decide to turn on a valve, we calculate
+    # how much flow we've already accounted for (including
+    # that valve) during the remaining minutes.  We then
+    # compare that value to the value in this table: if the
+    # new value is <= the value in the table, then there's
+    # no point in continuing because already found a path
+    # where we were doing better, so we abandon this path.
+    # Otherwise, we update the table and continue on.
     #
-    if valves[curr].closed and valves[curr].rate > 0:
+    search_state = {name : (0, minutes_remaining) for name in valves.keys()}
 
-        #sequence.append(
-        #        log_state(valves, valve_states,
-        #                  30 - minutes_remaining, curr_flow))
-        #sequence.append('You open valve %s.' % curr)
+    print('SEARCH STATE')
+    print(search_state)
 
-        new_flow = curr_flow + valves[curr].rate
-        valves[curr].closed = False
-        score = part1_dfs(
-                curr, valves,
-                minutes_remaining - 1,
-                new_flow, [], sequence)
-        valves[curr].closed = True
+    return part2_bfs_worker(
+            curr0, curr1, valves, minutes_remaining - 1, search_state)
 
-        #sequence.pop()
-        #sequence.pop()
 
-        if best_score < score:
-            best_score = score
+def part2_bfs_worker(curr0, curr1, valves, minutes_remaining, search_state):
 
-    for next_valve, distance in valves[curr].neighbors:
+    search_queue = []
 
-        if distance != 1:
-            print('OOPS this code DOES NOT support distances')
+    # If the rate of a valve is zero, then just pretend that
+    # it's already open.  We can't "open" it any more than it
+    # already is.
+    #
+    open_v = [v.name for v in valves.values() if v.rate == 0]
+    print('2 OPEN_V ', open_v)
 
-        # observation: it just wastes time to loop around to
-        # some place that we've already seen, unless we open
-        # a valve somewhere along the way
+    # Each queue entry: (vname1, vname2, minutes_remaining,
+    # curr_flow, minutes_needed, total_flow, open_v, path)
+    #
+    search_queue.append(
+            (curr0, curr1, minutes_remaining, 0, 0, open_v, [], []))
 
-        if next_valve in path_so_far:
-            # print('POINTLESS LOOPING %s' % path_so_far)
+    highest_total = 0
+
+    already = set()
+
+    while search_queue:
+        # print('LENQ %d' % len(search_queue))
+
+        cand = search_queue.pop()
+        # print('CAND ', cand)
+        (vname0, vname1, minutes, curr_flow, total_flow,
+                open_v, pst0, pst1) = cand
+
+        # print('v %s m %d c %d t %d' % (vname, minutes, curr_flow, total_flow))
+
+        if minutes <= 0:
+            print('MINUTES <= 0')
+            final_total = total_flow + curr_flow # WHA?
+            #print('T vname %s total %d' % (vname, total_flow))
+            if final_total > highest_total:
+                highest_total = final_total
+                # print('HIGHEST %d len %d' % (highest_total, len(search_queue)))
+                # print(search_state)
+
             continue
 
-        #print('curr %s next %s min %d flow %d' %
-        #      (curr, next_valve, minutes_remaining, flow_this_minute))
+        if len(open_v) == len(valves):
+            # print('ALL OPEN')
+            final_total = total_flow + curr_flow * (minutes + 1)
+            if final_total > highest_total:
+                highest_total = final_total
 
-        #sequence.append('at valve %s at %d release %d' % (
-        #    next_valve, 30 - minutes_remaining, flow_this_minute))
+            continue
 
-        #sequence.append(
-        #        log_state(valves, valve_states,
-        #                  30 - minutes_remaining, curr_flow))
-        #sequence.append('You move to valve %s.' % next_valve)
-        score = part1_dfs(
-                next_valve, valves, minutes_remaining - 1,
-                curr_flow, path_so_far + [next_valve], sequence)
-        #sequence.pop()
-        #sequence.pop()
+        valve0 = valves[vname0]
+        valve1 = valves[vname1]
 
-        if score > best_score:
-            best_score = score
+        next_v0 = []
+        next_v1 = []
 
-    return curr_flow + best_score
+        new_open_v = open_v[:]
+
+        if valve0.rate >= 0 and vname0 not in new_open_v:
+            new_open_v.append(vname0)
+            next_v0.append(
+                    (vname0, valve0.rate, open_v + [vname0], [vname0]))
+
+        if valve1.rate >= 0 and vname1 not in new_open_v:
+            next_v1.append(
+                    (vname1, valve1.rate, open_v + [vname1], [vname1]))
+
+        for neighbor, distance in valve0.neighbors:
+            if neighbor not in pst0:
+                next_v0.append((neighbor, 0, open_v, pst0 + [vname0]))
+
+        for neighbor, distance in valve1.neighbors:
+            if neighbor not in pst1:
+                next_v1.append((neighbor, 0, open_v, pst1 + [vname1]))
+
+        for e0 in next_v0:
+            next0, flow_change0, open_v0, new_pst0 = e0
+            for e1 in next_v1:
+                next1, flow_change1, open_v1, new_pst1 = e1
+
+                search_queue.append(
+                        (next0, next1,
+                         minutes - 1,
+                         curr_flow + flow_change0 + flow_change1,
+                         total_flow + curr_flow,
+                         list(set(open_v0 + open_v1)),
+                         new_pst0, new_pst1))
+
+    return highest_total
 
 
 def main():
@@ -316,8 +352,12 @@ def main():
     #cm.simplify()
     #print('cm ', cm.valves)
 
-    total_flow = part1_bfs('AA', cm.valves, 30)
-    print('part 1b: %d' % total_flow)
+    #total_flow = part1_bfs('AA', cm.valves, 30)
+    #print('part 1b: %d' % total_flow)
+
+    cm = CaveMap(valves)
+    total_flow = part2_bfs('AA', 'AA', cm.valves, 26)
+    print('part 2: %d' % total_flow)
 
 
 if __name__ == '__main__':
