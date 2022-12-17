@@ -16,7 +16,7 @@ class Chimney:
 
     def __init__(self, puffs, width=7):
 
-        self.height = 8 # does this matter?
+        self.height = 20 # does this matter?
         self.width = width
         self.puffs = puffs
         self.puff_ind = 0
@@ -37,9 +37,9 @@ class Chimney:
 
         print('----')
         for y in range(self.curr_top - 1, -1, -1):
-            print('y = ', y, ' ', ''.join(self.rock_grid[y]))
+            print(''.join(self.rock_grid[y]))
         print('++++')
-        print(self.rock_grid)
+        # print(self.rock_grid)
 
     def apply_puff(self, rock, pos, puff):
 
@@ -51,7 +51,7 @@ class Chimney:
             dx = 1
 
         rock_now = [(x + px + dx, y + py) for x, y in rock]
-        print('rock_now ', rock_now)
+        # print('rock_now ', rock_now)
 
         if min([p[0] for p in rock_now]) < 0:
             return pos
@@ -59,7 +59,7 @@ class Chimney:
             return pos
 
         for x, y in rock_now:
-            print('looking at %d, %d' % (x, y))
+            # print('looking at %d, %d' % (x, y))
             if self.rock_grid[y][x] != '.':
                 return pos
 
@@ -84,24 +84,32 @@ class Chimney:
 
         px, py = pos
 
-        print('rock ', rock)
+        # print('rock ', rock)
         rock_now = [(x + px, y + py) for x, y in rock]
-        print('rock_now ', rock_now)
+        # print('rock_now ', rock_now)
 
         for x, y in rock_now:
             self.rock_grid[y][x] = symbol
 
+    def find_max_height(self):
+
+        for i in range(len(self.rock_grid) - 1, -1, -1):
+            if '#' in self.rock_grid[i]:
+                return i + 1
+
+        return 0
+
     def drop(self):
 
         rock = self.ROCK_SHAPES[self.rock_ind]
-        print('rock =', rock)
+        # print('rock =', rock)
 
         self.rock_ind = (self.rock_ind + 1) % len(self.ROCK_SHAPES)
 
         rock_pos = (self.initial_x, self.initial_y)
 
         while True:
-            self.draw()
+            # self.draw()
 
             puff = self.puffs[self.puff_ind]
             self.puff_ind = (self.puff_ind + 1) % len(self.puffs)
@@ -119,6 +127,17 @@ class Chimney:
             print('moving down')
             rock_pos = down_pos
 
+        new_height = self.find_max_height()
+        print('max height ', self.find_max_height())
+
+        self.initial_y = new_height + 3
+
+        if self.height < self.initial_y + 5:
+            for _ in range(10):
+                self.rock_grid.append(['.'] * self.width)
+
+            self.height = len(self.rock_grid)
+
 
 def reader():
 
@@ -135,10 +154,13 @@ def main():
 
     chimney = reader()
 
-    chimney.draw()
-    chimney.drop()
-    chimney.draw()
+    print('max height ', chimney.find_max_height())
+    # chimney.draw()
+    for _ in range(2022):
+        chimney.drop()
+        # chimney.draw()
 
+    print('max height ', chimney.find_max_height())
 
 if __name__ == '__main__':
     main()
