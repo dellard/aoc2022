@@ -116,19 +116,20 @@ class Chimney:
 
             puff_pos = self.apply_puff(rock, rock_pos, puff)
             if puff_pos == rock_pos:
-                print('could not move %s' % puff)
+                #print('could not move %s' % puff)
+                pass
             down_pos = self.fall_one(rock, puff_pos)
 
             if down_pos == puff_pos:
-                print('at rest')
+                # print('at rest')
                 self.place(rock, puff_pos)
                 break
 
-            print('moving down')
+            # print('moving down')
             rock_pos = down_pos
 
         new_height = self.find_max_height()
-        print('max height ', self.find_max_height())
+        # print('max height ', self.find_max_height())
 
         self.initial_y = new_height + 3
 
@@ -143,24 +144,174 @@ def reader():
 
     puffs = sys.stdin.readline().strip()
 
-    print(puffs)
+    return puffs
+
+
+def part1(puffs, cnt=2022):
 
     chimney = Chimney(puffs)
 
-    return chimney
+    for i in range(cnt):
+        chimney.drop()
+        if chimney.puff_ind == 0:
+            print('here %d' % i)
+        # chimney.draw()
+
+    print('part 1: %d' % chimney.find_max_height())
+
+
+def part2(puffs, cnt=2022):
+
+    prelim_iters, iters_per_loop, height_per_loop = recon(puffs)
+
+
+    # how many rocks it takes to get into the loop
+    #
+    # if cnt is less than prelim_iters, oops
+    #
+
+    # for the test
+    #prelim_iters = 57
+    #iters_per_loop = 35
+    #height_per_loop = 53
+
+    # for the eval
+    #prelim_iters = 3429
+    #iters_per_loop = 1715
+    #height_per_loop = 2616
+
+    # create a chimney and drop the first
+    # prelim_iters rocks into it, to get
+    # things set up
+    #
+    chimney = Chimney(puffs)
+    for i in range(prelim_iters):
+        chimney.drop()
+
+    curr_height = chimney.find_max_height()
+
+    elided_loops = (cnt - prelim_iters) // iters_per_loop
+
+    remaining_rocks = (cnt - prelim_iters) % iters_per_loop
+
+    # Drop the leftover rocks, and find the resulting height
+    for i in range(remaining_rocks):
+        chimney.drop()
+
+    curr_height = chimney.find_max_height()
+
+    total_height = curr_height + (elided_loops * height_per_loop)
+
+    print('part 2: %d' % total_height)
+
+
+def recon(puffs, n_iters=20000):
+    """
+    find the periodicity of the behavior of the
+    falling rocks
+    """
+
+    # n_iters is the maximum number of iterations
+    # we'll use to test for a loop.  We want this
+    # to be as small as possible, so everything
+    # runs faster, but we could also make this
+    # dynamic, with a little work.  For the puzzle
+    # input, 20,000 is (quite a bit) more than
+    # adequate.
+
+    chimney = Chimney(puffs)
+
+    # What we're going to do is consider the top
+    # of the stack when the offset into the puffs
+    # is small: starting at 1, and going to 20.
+    # Since there's a small limit to how many puffs
+    # a rock can encounter before settling, we know
+    # that eventually this will happen.
+    #
+    # We start at 1, instead of 0, in order to avoid
+    # an edge case (the very first rock, might not
+    # be part of a loop).
+    #
+    # It would be more efficient to check all the
+    # offsets in one pass, but this is Good Enough
+    # because the loops (for the puzzle input)
+    # are reasonably easy to find.
+    #
+    for offset in range(1, 20, 1):
+
+        # Start the chimney from scratch each time
+        #
+        chimney = Chimney(puffs)
+
+        state = []
+        prev_i = 0
+        prev_h = 0
+
+        prev_state = []
+        prev_span_i = 0
+        prev_span_h = 0
+
+        for i in range(n_iters):
+            chimney.drop()
+
+            if chimney.puff_ind == offset:
+                height = chimney.find_max_height()
+
+                state.append((chimney.puff_ind, chimney.rock_ind))
+                span_i = i - prev_i
+                span_h = height - prev_h
+
+                # See whether everything looks like it looked
+                # the last time we were at this offset, and if
+                # so, then return the number of rocks we had
+                # to drop to get into the loop (i - span_i),
+                # the number of rocks in the loop (span_i),
+                # and the height each loop adds to the pile
+                # (span_h)
+                #
+                # Note that we don't realize that we're in
+                # the loop until we have completed it, so
+                # that's why we use (i - span_i) instead of
+                # just using i.  We could also use i, but
+                # (i - span_i) reduces the number of rocks
+                # we needlessly drop later.
+                #
+                # NOTE: it's possible my heuristic is too
+                # weak: I don't actually check the pile
+                # to see if the top span_h rows are the
+                # same as the previous.  That would be easy
+                # to add, but I've got other things to do
+                # with my weekend.
+                #
+                if prev_span_h == span_h and prev_span_i == span_i:
+                    if state == prev_state:
+                        #print('Got 1 at %d span %d spanh %d' %
+                        #      (i, span_i, span_h))
+                        return i - span_i, span_i, span_h
+
+                        #print('Got 1 at %d span %d spanh %d - %s' %
+                        #      (i, span_i, span_h,
+                        #       ', '.join([str(o) for o in state])))
+
+                prev_state = state
+                prev_i = i
+                prev_h = height
+
+                prev_span_i = span_i
+                prev_span_h = span_h
+                prev_state = state
+
+    print('OOPS: try making n_iters larger!')
+    sys.exit(1)
 
 
 def main():
 
-    chimney = reader()
+    puffs = reader()
 
-    print('max height ', chimney.find_max_height())
-    # chimney.draw()
-    for _ in range(2022):
-        chimney.drop()
-        # chimney.draw()
+    part1(puffs, cnt=2022)
+    part2(puffs, cnt=1000000000000)
 
-    print('max height ', chimney.find_max_height())
 
 if __name__ == '__main__':
     main()
