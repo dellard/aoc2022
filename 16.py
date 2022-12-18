@@ -179,6 +179,10 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
     if minutes == 0:
         return current_total, path
 
+    if len(path) == len(cave.paths):
+        print('ALL OUT PREAMBLE')
+        return current_total, path
+
     # If we don't open any more valves, then this is
     # how much will flow during the remaining minutes
     #
@@ -193,6 +197,10 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
         increase = cave.valves[node0].rate + cave.valves[node1].rate
         new_total = base_total + (increase * (minutes - 1))
 
+        if len(path) == len(cave.paths):
+            print('ALL OUT 0 0')
+            return new_total, path
+
         for new_n0, new_d0 in cave.paths[node0]:
             if new_d0 >= minutes:
                 continue
@@ -203,18 +211,26 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
                 if new_n1 == new_n0:
                     continue
 
+                # symmetry breaking: no need to consider
+                # when the elephant and I cross routes
+                #
+                if new_n1 < new_n0:
+                    continue
+
                 if new_d1 >= minutes:
                     continue
                 if new_n1 in path:
                     continue
 
+                warp = min(new_d0, new_d1)
+
                 ext_total, ext_path = extend2(
                         cave,
-                        new_n0, new_d0,
-                        new_n1, new_d1,
+                        new_n0, new_d0 - warp,
+                        new_n1, new_d1 - warp,
                         path + [new_n0, new_n1],
                         new_total,
-                        minutes - 1)
+                        minutes - (warp + 1))
 
                 if highest_total < ext_total:
                     highest_total, highest_path = ext_total, ext_path
@@ -223,6 +239,10 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
         print('CASE 0 X')
         increase = cave.valves[node0].rate
         new_total = base_total + (increase * (minutes - 1))
+
+        if len(path) == len(cave.paths):
+            print('ALL OUT 0 X')
+            return new_total, path
 
         neighbors = cave.paths[node0]
         for new_neighbor, new_distance in neighbors:
@@ -241,13 +261,14 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
             if new_neighbor in path:
                 continue
 
+            warp = min(new_distance, dist1 - 1)
             ext_total, ext_path = extend2(
                     cave,
-                    new_neighbor, new_distance,
-                    node1, dist1 - 1,
+                    new_neighbor, new_distance - warp,
+                    node1, dist1 - warp,
                     path + [new_neighbor],
                     new_total,
-                    minutes - 1)
+                    minutes - (warp + 1))
 
             if highest_total < ext_total:
                 highest_total, highest_path = ext_total, ext_path
@@ -256,6 +277,10 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
         print('CASE X 0')
         increase = cave.valves[node1].rate
         new_total = base_total + (increase * (minutes - 1))
+
+        if len(path) == len(cave.paths):
+            print('ALL OUT X 0')
+            return new_total, path
 
         neighbors = cave.paths[node1]
         for new_neighbor, new_distance in neighbors:
@@ -274,13 +299,14 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
             if new_neighbor in path:
                 continue
 
+            warp = min(dist0 - 1, new_distance)
             ext_total, ext_path = extend2(
                     cave,
                     node0, dist0 - 1,
                     new_neighbor, new_distance,
                     path + [new_neighbor],
                     new_total,
-                    minutes - 1)
+                    minutes - (warp + 1))
 
             if highest_total < ext_total:
                 highest_total, highest_path = ext_total, ext_path
@@ -327,11 +353,11 @@ def main():
 
     flow, path = solver_pt1(cm, start='AA', minutes=30)
     print('part 1 ', flow)
-    print('part 1 path ', path)
+    #print('part 1 path ', path)
 
     flow, path = solver_pt2(cm, start='AA', minutes=26)
     print('part 2 ', flow)
-    print('part 2 path ', path)
+    #print('part 2 path ', path)
 
 
 if __name__ == '__main__':
