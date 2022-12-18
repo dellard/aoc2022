@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 18
+"""
+
 import re
 import sys
 
@@ -49,58 +53,39 @@ def total_unconnected(points):
 
 def find_voids(points):
 
-    point_set = set(points)
-    if len(point_set) != len(points):
-        print('OOPS -- duplicate points')
-
-    # if none of the cubes touch, then this
-    # is the most exposed sides we can get
-    #
-    total_possible = len(points) * 6
-
-    print('most possible: ', total_possible)
+    # Find the extents of the points.  We use
+    # this to construct a rectangular volume
+    # containing a filler shape which contains
+    # everything in the volume *except* the points
 
     x_ord = sorted(points, key=lambda p: p[0])
-    x_min = x_ord[0][0]
-    x_max = x_ord[-1][0]
+    x_min, x_max = x_ord[0][0], x_ord[-1][0]
 
     y_ord = sorted(points, key=lambda p: p[1])
-    y_min = y_ord[0][1]
-    y_max = y_ord[-1][1]
+    y_min, y_max = y_ord[0][1], y_ord[-1][1]
 
     z_ord = sorted(points, key=lambda p: p[2])
-    z_min = z_ord[0][2]
-    z_max = z_ord[-1][2]
+    z_min, z_max = z_ord[0][2], z_ord[-1][2]
 
+    point_set = set(points)
+
+    # construct the filler
+    #
     filler = set()
-
-    cube_cnt = 0
     for x in range(x_min - 1, x_max + 3, 1):
         for y in range(y_min - 1, y_max + 3, 1):
             for z in range(z_min - 1, z_max + 3, 1):
                 if (x, y, z) not in point_set:
                     filler.add((x, y, z))
-                cube_cnt += 1
-    print('cube_cnt ', cube_cnt)
-
-    print('x min/max ', x_min, x_max)
-    print('y min/max ', y_min, y_max)
-    print('z min/max ', z_min, z_max)
-
-    x_dim = 3 + x_max - x_min
-    y_dim = 3 + y_max - y_min
-    z_dim = 3 + z_max - z_min
-
-    ext_faces = 2 * ((x_dim * y_dim) + (x_dim * z_dim) + (y_dim * z_dim))
-    int_faces = total_unconnected(list(filler))
-    orig_exp = total_unconnected(points)
-
-    # partition filler by removing every cube that
-    # is reachable from the outside of the enclosing
-    # volume.  This will leave just the voids, if
-    # there are any.
 
     """
+    Now for the fun part:
+
+    partition filler by removing every cube that
+    is reachable from the outside of the enclosing
+    volume.  This will leave just the voids, if
+    there are any.
+
     1. make a to-do list of all of the "surface" cubes
         that are on the perimeter of the filler, and
         add each cube in the to-do list to the visited
@@ -133,9 +118,6 @@ def find_voids(points):
             todo.append(point)
             visited.add(point)
 
-    print(len(todo))
-    print(len(visited))
-
     # Step 2
 
     def explore(point):
@@ -157,28 +139,19 @@ def find_voids(points):
     for point in visited:
         filler.remove(point)
 
-    print('filler remaining ', filler)
-
     void_surface = total_unconnected(list(filler))
-    print('void surface ', void_surface)
-
     return void_surface
-
-
 
 
 def main():
 
     points = reader()
 
-    #total_un = total_unconnected([(1, 1, 1), (2, 1, 1)])
-    #print(total_un)
-
     total_un = total_unconnected(points)
     print('part 1: ', total_un)
 
-    x = find_voids(points)
-    print('part 2: ', total_un - x)
+    void_surface = find_voids(points)
+    print('part 2: ', total_un - void_surface)
 
 if __name__ == '__main__':
     main()
