@@ -45,7 +45,7 @@ class CaveMap:
         states = [[s_name]]
 
         while states and e_name not in reached:
-            path = states.pop()
+            path = states.pop(0)
 
             last_name = path[-1]
             for name, distance in self.valves[last_name].neighbors:
@@ -91,47 +91,58 @@ def reader():
     return valves
 
 
-def extend(cave, node, path, flow, minutes):
+def extend(cave, node, path, current_total, minutes):
 
-    spacer = ' ' * (30 - minutes)
-    print('%s %s flow %d mins %d %s' %
-          (spacer, node, flow, minutes, str(path)))
+    if minutes < 5:
+        spacer = ' ' * (30 - minutes)
+        print('x%s%s flow %d mins %d %s' %
+              (spacer, node, current_total, minutes, str(path)))
+
+    if minutes < 0:
+        print('x WHOA')
+        return current_total, path
 
     if minutes <= 0:
-        return flow
+        return current_total, path
 
-    # If we don't change any more valves,
-    # this is how much will flow during the
-    # remaining minutes
+    # If we don't open any more valves, then this is
+    # how much will flow during the remaining minutes
     #
-    base_score = flow
-
-    # How much we can improve the score by
-    # opening a given valve
-    #
-    inc_score = 0
-    highest_inc_score = base_score
+    base_total = current_total
+    highest_total = base_total
+    highest_path = path
 
     neighbors = cave.paths[node]
     for neighbor, distance in neighbors:
+
+        # If the neighbor is too far away to open
+        # in time, then don't bother
+        #
         if distance >= minutes:
             continue
 
+        # If the neighbor is already on our path,
+        # then we can't open it again
+        # (we might pass through it on our way to
+        # another node, but that's already accounted
+        # for in the distance of the paths)
+        #
         if neighbor in path:
             continue
 
         added_rate = cave.valves[neighbor].rate
         added_flow = added_rate * ((minutes - 1) - distance)
         print('added flow %d rate %d' % (added_flow, added_rate))
-        inc_score = extend(
+
+        new_total, new_path = extend(
                 cave, neighbor, path + [neighbor],
-                flow + added_flow, (minutes - 1) - distance)
+                current_total + added_flow, (minutes - 1) - distance)
 
-        highest_inc_score = max(inc_score, highest_inc_score)
+        if highest_total <= new_total:
+            highest_total, highest_path = new_total, new_path
+            print('TOTAL %d FOR %s' % (highest_total, new_path))
 
-    # print('best %d %s' % (highest_inc_score, str(path)))
-
-    return highest_inc_score
+    return highest_total, highest_path
 
 
 def solver_pt1(cave, start='AA', minutes=30):
@@ -144,15 +155,8 @@ def solver_pt1(cave, start='AA', minutes=30):
     #
     # This might blow up for the big cases.  We'll see.
 
-    highest = extend(cave, start, [start], 0, minutes)
-    return highest
-
-
-
-def log_state(valves, valve_states, minute, pressure):
-    return '\n== Minute %d ==\nValves %s are open, releasing %d pressure' % (
-            minute,
-            ', '.join(sorted([v for v in valves if valve_states[v]])), pressure)
+    highest_flow, highest_path = extend(cave, start, [start], 0, minutes)
+    return highest_flow, highest_path
 
 
 def part1_bfs(curr, valves, minutes_remaining):
@@ -232,7 +236,6 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
 
             continue
 
-
         valve = valves[vname]
 
         if valve.rate >= 0 and vname not in open_v:
@@ -254,8 +257,8 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
             search_queue.append(next_step)
 
         for neighbor, distance in valve.neighbors:
-            print('PST ', path_since_turn)
-            print('N %s DISTANCE %d' % (neighbor, distance))
+            # print('PST ', path_since_turn)
+            # print('N %s DISTANCE %d' % (neighbor, distance))
 
             if neighbor not in path_since_turn:
                 next_step = (
@@ -264,7 +267,7 @@ def part1_bfs_worker(curr, valves, minutes_remaining, search_state):
                         distance,
                         total_flow,
                         open_v, path_since_turn + [neighbor])
-                # search_queue.append(next_step)
+                search_queue.append(next_step)
 
                 """
                 # don't keep pushing the same stuff
@@ -412,9 +415,13 @@ def main():
     cm = CaveMap(valves)
 
     for elem in cm.paths:
-        print('node ', elem, ' ', str(cm.paths[elem]))
+        related = ', '.join(['%s/d%d/r%d' % (v[0], v[1], valves[v[0]].rate) for v in cm.paths[elem]])
+        #print('node ', elem, ' ', str(cm.paths[elem]))
+        print('node ', elem, ' ', related)
 
-    print('Ex ', solver_pt1(cm, start='AA', minutes=30))
+    flow, path = solver_pt1(cm, start='AA', minutes=30)
+    print('part 1x ', flow)
+    print('part 1x ', path)
 
     sys.exit(0)
 
