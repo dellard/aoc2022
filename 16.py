@@ -166,14 +166,145 @@ def solver_pt1(cave, start='AA', minutes=30):
     highest_flow, highest_path = extend1(cave, start, [start], 0, minutes)
     return highest_flow, highest_path
 
-def extend2(cave, node0, node1, path, current_total, minutes):
 
-    pass
+def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
+
+    print('me %s dist %d ele %s dist %d total %d minutes %d %s'
+          % (node0, dist0, node1, dist1, current_total, minutes,
+             str(path)))
+
+    if minutes < 0:
+        return current_total, path
+
+    if minutes == 0:
+        return current_total, path
+
+    # If we don't open any more valves, then this is
+    # how much will flow during the remaining minutes
+    #
+    base_total = current_total
+    highest_total = base_total
+    highest_path = path
+    
+    print('dist0 %d dist1 %d' % (dist0, dist1))
+
+    if dist0 == 0 and dist1 == 0:
+        print('CASE 0 0')
+        increase = cave.valves[node0].rate + cave.valves[node1].rate
+        new_total = base_total + (increase * (minutes - 1))
+
+        for new_n0, new_d0 in cave.paths[node0]:
+            if new_d0 >= minutes:
+                continue
+            if new_n0 in path:
+                continue
+
+            for new_n1, new_d1 in cave.paths[node1]:
+                if new_n1 == new_n0:
+                    continue
+
+                if new_d1 >= minutes:
+                    continue
+                if new_n1 in path:
+                    continue
+
+                ext_total, ext_path = extend2(
+                        cave,
+                        new_n0, new_d0,
+                        new_n1, new_d1,
+                        path + [new_n0, new_n1],
+                        new_total,
+                        minutes - 1)
+
+                if highest_total < ext_total:
+                    highest_total, highest_path = ext_total, ext_path
+
+    if dist0 == 0 and dist1 != 0:
+        print('CASE 0 X')
+        increase = cave.valves[node0].rate
+        new_total = base_total + (increase * (minutes - 1))
+
+        neighbors = cave.paths[node0]
+        for new_neighbor, new_distance in neighbors:
+            # If the neighbor is too far away to open
+            # in time, then don't bother
+            #
+            if new_distance >= minutes:
+                continue
+
+            # If the neighbor is already on our path,
+            # then we can't open it again
+            # (we might pass through it on our way to
+            # another node, but that's already accounted
+            # for in the distance of the paths)
+            #
+            if new_neighbor in path:
+                continue
+
+            ext_total, ext_path = extend2(
+                    cave,
+                    new_neighbor, new_distance,
+                    node1, dist1 - 1,
+                    path + [new_neighbor],
+                    new_total,
+                    minutes - 1)
+
+            if highest_total < ext_total:
+                highest_total, highest_path = ext_total, ext_path
+
+    if dist0 != 0 and dist1 == 0:
+        print('CASE X 0')
+        increase = cave.valves[node1].rate
+        new_total = base_total + (increase * (minutes - 1))
+
+        neighbors = cave.paths[node1]
+        for new_neighbor, new_distance in neighbors:
+            # If the neighbor is too far away to open
+            # in time, then don't bother
+            #
+            if new_distance >= minutes:
+                continue
+
+            # If the neighbor is already on our path,
+            # then we can't open it again
+            # (we might pass through it on our way to
+            # another node, but that's already accounted
+            # for in the distance of the paths)
+            #
+            if new_neighbor in path:
+                continue
+
+            ext_total, ext_path = extend2(
+                    cave,
+                    node0, dist0 - 1,
+                    new_neighbor, new_distance,
+                    path + [new_neighbor],
+                    new_total,
+                    minutes - 1)
+
+            if highest_total < ext_total:
+                highest_total, highest_path = ext_total, ext_path
+
+    if dist0 > 0 and dist1 > 0:
+        print('CASE X X')
+        ext_total, ext_path = extend2(
+                cave,
+                node0, dist0 - 1,
+                node1, dist1 - 1,
+                path,
+                current_total,
+                minutes - 1)
+
+        if highest_total < ext_total:
+            highest_total, highest_path = ext_total, ext_path
+
+    return highest_total, highest_path
+
 
 def solver_pt2(cave, start='AA', minutes=30):
 
     highest_flow, highest_path = extend2(
-            cave, start, start, [start], 0, minutes)
+            cave, start, 0, start, 0, [start], 0, minutes)
     return highest_flow, highest_path
 
 
@@ -197,6 +328,10 @@ def main():
     flow, path = solver_pt1(cm, start='AA', minutes=30)
     print('part 1 ', flow)
     print('part 1 path ', path)
+
+    flow, path = solver_pt2(cm, start='AA', minutes=26)
+    print('part 2 ', flow)
+    print('part 2 path ', path)
 
 
 if __name__ == '__main__':
