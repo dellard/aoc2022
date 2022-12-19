@@ -65,90 +65,139 @@ def reader():
     return blueprints
 
 
+def max_cracked(minutes_remaining):
+    """
+    If we started build new geode-cracking robots at
+    one per minute right now, and each takes a minute to
+    build, and each starts cracking one geode per minute
+    until time runs out, how many geodes could they crack?
+    """
+
+    cracked = 0
+    for i in range(minutes_remaining):
+        cracked += i
+
+    return cracked
+
+
 def solver1_dfs(blueprint, minutes, robots, supplies, seen):
 
-    spacer = ' ' * (24 - minutes)
+    stack = []
+    stack.append((minutes, robots, supplies))
 
-    key = (minutes, robots, supplies)
-    # key = (robots, supplies)
-    if key in seen:
-        print('%sCUT min %d %d' % (spacer, minutes, seen[key]))
-        return seen[key]
+    max_possibles = [max_cracked(x) for x in range(minutes + 1)]
+    print('MAX_POSSIBLES ', max_possibles)
 
-    if minutes == 0:
-        print(spacer, 'got ', supplies[3])
+    highest_score = 0
+    while stack:
+        key = stack.pop()
 
-        return supplies[3]
+        if key in seen:
+            print('%sCUT min %d %d' % (spacer, minutes, seen[key]))
+            continue
 
-    # base case: if there's only one minute left, then
-    # there's no point in trying to build any more robots;
-    # just run the geode-cracking robots we have one more
-    # cycle
-    if minutes == 1:
-        print('BASE stop')
-        return supplies[3] + robots[3]
+        seen[key] = 1
 
-    # base case: if we have enough robots to supply us with
-    # the materials to make a new geode robot, then we might
-    # as well just make new geode robots from now on.
-    #
-    geo_cost = blueprint.geo_cost
-    if all([robots[i] >= geo_cost[i] for i in range(3)]):
-        print('BASE')
-        # FIXME: this probably isn't right: the number of geode robots
-        # will increase with each passing minute, so it's a square
-        # but the parameters are iffy
-        return ((minutes - 1) * (minutes - 2)) + supplies[3]
+        (minutes, robots, supplies) = key
+        spacer = ' ' * (24 - minutes)
 
-    print('%smin %d r %s s %s' % (spacer, minutes, str(robots), str(supplies)))
+        if minutes < 2:
+            if minutes == 0:
+                score = supplies[3]
+                print('OOPS HIT BOTTOM')
+            elif minutes == 1:
+                score = supplies[3] + robots[3]
+                # print('HIT ALMOST')
 
-    scores = []
-    factory_choices = blueprint.new_robots(supplies)
-    print('FACT ', factory_choices)
+            print(spacer, 'got ', score)
+            if score > highest_score:
+                highest_score = score
+                print('NEW high score y %d' % highest_score)
 
-    for name in ['geode', 'obsidian', 'clay', 'ore', 'none']:
-        if name in factory_choices:
-            new_supplies = factory_choices[name]
-            print('NAME = %s %s' % (name, supplies))
+            continue
 
-            if name == 'none':
-                new_robots = robots
-            elif name == 'ore':
-                new_robots = (robots[0] + 1, robots[1], robots[2], robots[3])
-            elif name == 'clay':
-                new_robots = (robots[0], robots[1] + 1, robots[2], robots[3])
-            elif name == 'obsidian':
-                new_robots = (robots[0], robots[1], robots[2] + 1, robots[3])
-            elif name == 'geode':
-                new_robots = (robots[0], robots[1], robots[2], robots[3] + 1)
-            else:
-                print('OOPS')
+        curr_score = supplies[3]
+        max_possible = curr_score + (robots[3] * minutes) + max_possibles[minutes]
+        if max_possible <= highest_score:
+            print('IMP %d' % minutes)
+            continue
 
-            scores.append(solver1_dfs(
-                    blueprint, minutes - 1, new_robots, 
-                    tuple([robots[i] + new_supplies[i] for i in range(4)]),
-                    seen))
 
-    if not scores:
-        best = 0
-    else:
-        best = max(scores)
-    seen[key] = best
+        # base case: if we have enough robots to supply us with
+        # the materials to make a new geode robot, then we might
+        # as well just make new geode robots from now on.
+        #
+        geo_cost = blueprint.geo_cost
+        if all([robots[i] >= geo_cost[i] for i in range(3)]):
+            print('BASE for max construction')
+            # FIXME: this probably isn't right: the number of geode robots
+            # will increase with each passing minute, so it's a square
+            # but the parameters are iffy
+            score = ((minutes - 1) * (minutes - 2)) + supplies[3]
+            if score > highest_score:
+                highest_score = score
+                print('NEW high score z %d' % highest_score)
 
-    return best
+            continue
+
+        print('%smin %d r %s s %s' % (spacer, minutes, str(robots), str(supplies)))
+
+        factory_choices = blueprint.new_robots(supplies)
+        # print('FACT ', factory_choices)
+
+        # order matters; we want to leave the move that is likely
+        # to be best on the top of the stack so it will get expanded
+        # first.  Unfortunately, we can only guess what the best move
+        # is, although in the long run we want lots of geode robots
+        #
+        for name in ['none', 'ore', 'clay', 'obsidian', 'geode']:
+            if name in factory_choices:
+                new_supplies = factory_choices[name]
+                # print('NAME = %s %s' % (name, supplies))
+
+                if name == 'none':
+                    new_robots = robots
+                elif name == 'ore':
+                    new_robots = (robots[0] + 1, robots[1], robots[2], robots[3])
+                elif name == 'clay':
+                    new_robots = (robots[0], robots[1] + 1, robots[2], robots[3])
+                elif name == 'obsidian':
+                    new_robots = (robots[0], robots[1], robots[2] + 1, robots[3])
+                elif name == 'geode':
+                    new_robots = (robots[0], robots[1], robots[2], robots[3] + 1)
+                else:
+                    print('OOPS')
+
+                next_state = (minutes - 1, new_robots,
+                        tuple([robots[i] + new_supplies[i] for i in range(4)]))
+                if next_state in seen:
+                    print('%sCUT min %d %d' % (spacer, minutes, seen[key]))
+                    continue
+                else:
+                    stack.append(next_state)
+
+    return highest_score
 
 
 def solver1(blueprints, minutes):
 
     best_scores = []
-    # TODO: skipping 0 for now
+    total = 0
+    ind = 1
     for blueprint in blueprints:
         seen = {}
-        best_scores.append(
-                solver1_dfs(blueprint, minutes,
-                            (1, 0, 0, 0), (0, 0, 0, 0), seen))
+        score = solver1_dfs(
+                blueprint, minutes, (1, 0, 0, 0), (0, 0, 0, 0), seen)
+        total += ind * score
+        best_scores.append(score)
+        ind += 1
 
-    return best_scores
+    ind = 1
+    for score in best_scores:
+        print('score %d = %d' % (ind, score))
+        ind += 1
+
+    return total
 
 
 def main():
@@ -162,7 +211,10 @@ def main():
     #for row in new_stuff:
     #    print(row)
 
-    print('1 ', solver1(blueprints, 24))
+    for i in range(10):
+        print('%d %d' % (i, max_cracked(i)))
+
+    print('part 1: ', solver1(blueprints, 24))
 
 
 if __name__ == '__main__':
