@@ -200,21 +200,41 @@ def solver1(blueprints, minutes):
     return total
 
 
+def solver2(blueprints, minutes):
+
+    best_scores = []
+    prod = 1
+    for blueprint in blueprints[:3]:
+        seen = {}
+        score = solver1_dfs(
+                blueprint, minutes, (1, 0, 0, 0), (0, 0, 0, 0), seen)
+        prod *= score
+        best_scores.append(score)
+
+    ind = 1
+    for score in best_scores:
+        print('score %d = %d' % (ind, score))
+        ind += 1
+
+    return prod
+
+
 def main():
 
     blueprints = reader()
 
-    for bluep in blueprints:
-        print(bluep)
+    #for bluep in blueprints:
+    #    print(bluep)
 
     #new_stuff = blueprints[0].new_robots(supplies)
     #for row in new_stuff:
     #    print(row)
 
-    for i in range(10):
-        print('%d %d' % (i, max_cracked(i)))
+    #for i in range(10):
+    #    print('%d %d' % (i, max_cracked(i)))
 
     print('part 1: ', solver1(blueprints, 24))
+    print('part 2: ', solver2(blueprints, 32))
 
 
 if __name__ == '__main__':
