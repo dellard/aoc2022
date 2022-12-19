@@ -15,11 +15,12 @@ class CaveMap:
         # valves that work (have rate > 0), and between
         # the root node and each of the valves that work
         #
-        self.paths = self.find_paths(root_name=root_name)
+        self.paths, self.distances = self.find_paths(root_name=root_name)
 
     def find_paths(self, root_name='AA'):
 
         paths = {}
+        distances = {}
         working_valves = [name for name, val in self.valves.items()
                           if val.rate > 0]
 
@@ -28,16 +29,18 @@ class CaveMap:
 
             for end in working_valves:
                 if start != end:
-                    paths[start].append(
-                            (end, self._shortest_plen(start, end)))
+                    dist = self._shortest_plen(start, end)
+                    paths[start].append((end, dist))
+                    distances[(start, end)] = dist
 
         if root_name not in paths:
             paths[root_name] = []
             for end in working_valves:
-                paths[root_name].append(
-                        (end, self._shortest_plen(root_name, end)))
+                dist = self._shortest_plen(root_name, end)
+                paths[root_name].append((end, dist))
+                distances[(root_name, end)] = dist
 
-        return paths
+        return paths, distances
 
     def _shortest_plen(self, s_name, e_name):
 
@@ -167,80 +170,129 @@ def solver_pt1(cave, start='AA', minutes=30):
     return highest_flow, highest_path
 
 
-def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
+def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes, hist):
 
-    print('me %s dist %d ele %s dist %d total %d minutes %d %s'
+    print('HIST %s' % str(hist))
+
+    print('me %s dist %d ele %s dist %d total %d minutes %d %s %s'
           % (node0, dist0, node1, dist1, current_total, minutes,
-             str(path)))
+             str(path), str(hist)))
 
     if minutes < 0:
-        return current_total, path
+        print('OOPS: not expected 0')
+        return current_total, path, hist + [-1]
 
     if minutes == 0:
-        return current_total, path
+        print('ALL OUT ZERO %s %s' % (node0, node1))
+        return current_total, path, hist + [-2]
 
     if len(path) == len(cave.paths):
-        print('ALL OUT PREAMBLE')
-        return current_total, path
+        print('ALL OUT PREAMBLE %s %s' % (node0, node1))
+        return current_total, path, hist + [-3]
 
     # If we don't open any more valves, then this is
     # how much will flow during the remaining minutes
     #
     base_total = current_total
+
     highest_total = base_total
     highest_path = path
+    highest_hist = hist
     
     print('dist0 %d dist1 %d' % (dist0, dist1))
 
     if dist0 == 0 and dist1 == 0:
         print('CASE 0 0')
-        increase = cave.valves[node0].rate + cave.valves[node1].rate
-        new_total = base_total + (increase * (minutes - 1))
 
-        if len(path) == len(cave.paths):
-            print('ALL OUT 0 0')
-            return new_total, path
+        unseen_pairs = set()
+        unseen_nodes = []
 
-        for new_n0, new_d0 in cave.paths[node0]:
+        for n1 in cave.paths.keys():
+            if n1 in path:
+                continue
+
+            unseen_nodes.append(n1)
+
+            for n2 in cave.paths.keys():
+                if n2 in path:
+                    continue
+
+                if n1 == n2:
+                    continue
+
+                unseen_pairs.add((n1, n2))
+
+        if len(unseen_pairs) == 0:
+            if len(unseen_nodes) != 1:
+                print('OOPS what?')
+            print('DOING THE SPECIAL CASE')
+
+            new_n0 = unseen_nodes[0]
+
+            # if there's only one valve left to open, then
+            # figure out who is closer, and close it accordingly,
+            # and then return.  There's nothing more to try
+            #
+            new_d0 = min(cave.distances[(node0, new_n0)],
+                         cave.distances[(node1, new_n0)])
             if new_d0 >= minutes:
+                print('OOPS RAN OUT OF MINUTES')
+
+            increase = cave.valves[new_n0].rate * (minutes - (new_d0 + 1))
+            s_highest, s_path = extend1(
+                    cave, new_n0, path, current_total + increase, minutes - (new_d0 + 1))
+            print('Returning %d' % s_highest)
+            return s_highest, s_path, hist + [('S', new_n0, increase, minutes - 1)]
+
+        for new_n0, new_n1 in unseen_pairs:
+
+            new_d0 = cave.distances[(node0, new_n0)]
+            new_d1 = cave.distances[(node1, new_n1)]
+
+            if new_d0 >= minutes and new_d1 >= minutes:
+                # if we can't get to either new_n0 or new_n1,
+                # then we can't do anything with them
                 continue
-            if new_n0 in path:
+
+            # TODO: not sure about this case.  Hopefully
+            # these will be scooped up in some other pair
+            #
+            if new_d0 >= minutes or new_d1 >= minutes:
+                continue
+            
+            # To break symmetry, we ignore the case where
+            # new_d0 is greater than new_d1.  We'll get a
+            # chance to process these reflection of this
+            # pair
+            #
+            if new_d0 > new_d1:
                 continue
 
-            for new_n1, new_d1 in cave.paths[node1]:
-                if new_n1 == new_n0:
-                    continue
+            warp = min(new_d0, new_d1)
 
-                # symmetry breaking: no need to consider
-                # when the elephant and I cross routes
-                #
-                if new_n1 < new_n0:
-                    continue
+            print('X0 node0 %s dist0 %d node1 %s dist1 %d warp %d'
+                  % (new_n0, new_d0, new_n1, new_d1, warp))
 
-                if new_d1 >= minutes:
-                    continue
-                if new_n1 in path:
-                    continue
+            increase = (
+                    cave.valves[new_n0].rate * (minutes - (new_d0 + 1)) +
+                    cave.valves[new_n1].rate * (minutes - (new_d1 + 1)))
+            new_total = base_total + increase
 
-                if new_d0 > new_d1:
-                    new_n0, new_n1 = new_n1, new_n0
-                    new_d0, new_d1 = new_d1, new_d0
+            ext_total, ext_path, ext_hist = extend2(
+                    cave,
+                    new_n0, new_d0 - warp,
+                    new_n1, new_d1 - warp,
+                    path + [new_n0, new_n1],
+                    new_total,
+                    minutes - (1 + warp),
+                    hist + [('T', (new_n0, new_n1), increase, minutes - 1)])
+                    #minutes - (warp + 1))
 
-                warp = min(new_d0 + 1, new_d1 + 1)
+            if highest_total < ext_total:
+                highest_total, highest_path, highest_hist = ext_total, ext_path, ext_hist
+                print('NEW BEST HIST %d %s' % (highest_total, str(ext_hist)))
 
-                ext_total, ext_path = extend2(
-                        cave,
-                        new_n0, new_d0 - warp,
-                        new_n1, new_d1 - warp,
-                        path + [new_n0, new_n1],
-                        new_total,
-                        minutes - warp)
-                        #minutes - (warp + 1))
-
-                if highest_total < ext_total:
-                    highest_total, highest_path = ext_total, ext_path
-
-    if dist0 == 0 or dist1 == 0:
+    elif dist0 > 0 or dist1 > 0:
 
         # reorder things so that name0/dist0 is always the zero
         #
@@ -250,12 +302,6 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
             dist0, dist1 = dist1, dist0
 
         print('CASE X 0')
-        increase = cave.valves[node0].rate
-        new_total = base_total + (increase * (minutes - 1))
-
-        if len(path) == len(cave.paths):
-            print('ALL OUT 0 X')
-            return new_total, path
 
         neighbors = cave.paths[node0]
         for new_neighbor, new_distance in neighbors:
@@ -275,42 +321,57 @@ def extend2(cave, node0, dist0, node1, dist1, path, current_total, minutes):
                 continue
 
             #warp = min(new_distance + 1, dist1)
-            warp = min(new_distance + 1, dist1)
-            ext_total, ext_path = extend2(
+            warp = min(new_distance, dist1)
+
+            print('X1 node0 %s dist0 %d node1 %s dist1 %d warp %d %s'
+                  % (new_neighbor, new_distance, node1, dist1, warp, str(hist)))
+
+            increase = cave.valves[new_neighbor].rate * (minutes - (new_distance + 1))
+            new_total = base_total + increase
+
+            # TODO: I think there's a bug in how many minutes we subtract.
+            # There's a hidden extra 1 in the distance to a new node,
+            # but it should only be added once.
+            #
+            ext_total, ext_path, ext_hist = extend2(
                     cave,
                     new_neighbor, new_distance - warp,
                     node1, dist1 - warp,
                     path + [new_neighbor],
                     new_total,
-                    minutes - warp)
+                    minutes - (1 + warp),
+                    hist + [('O', new_neighbor, increase, minutes - 1)])
                     # minutes - (warp + 1))
 
             if highest_total < ext_total:
-                highest_total, highest_path = ext_total, ext_path
+                highest_total, highest_path, highest_ext = ext_total, ext_path, ext_hist
+                print('NEW BEST HIST %d %s' % (highest_total, str(ext_hist)))
 
     # This shouldn't happen, if we're doing things correctly.
     #
     if dist0 > 0 and dist1 > 0:
         print('OOPS CASE X X')
-        ext_total, ext_path = extend2(
+        ext_total, ext_path, ext_hist = extend2(
                 cave,
                 node0, dist0 - 1,
                 node1, dist1 - 1,
                 path,
                 current_total,
-                minutes - 1)
+                minutes - 1,
+                hist)
 
         if highest_total < ext_total:
-            highest_total, highest_path = ext_total, ext_path
+            highest_total, highest_path, highest_hist = ext_total, ext_path, ext_hist
+            print('NEW BEST HIST %d %s' % (highest_total, str(ext_hist)))
 
-    return highest_total, highest_path
+    return highest_total, highest_path, highest_hist
 
 
-def solver_pt2(cave, start='AA', minutes=30):
+def solver_pt2(cave, start='AA', minutes=26):
 
-    highest_flow, highest_path = extend2(
-            cave, start, 0, start, 0, [start], 0, minutes)
-    return highest_flow, highest_path
+    highest_flow, highest_path, highest_hist = extend2(
+            cave, start, 0, start, 0, [start], 0, minutes, [])
+    return highest_flow, highest_path, highest_hist
 
 
 def main():
@@ -323,20 +384,19 @@ def main():
         print(valves[vname])
     """
 
-    """
     for elem in cm.paths:
         related = ', '.join(['%s/d%d/r%d' % (v[0], v[1], valves[v[0]].rate) for v in cm.paths[elem]])
         #print('node ', elem, ' ', str(cm.paths[elem]))
         print('node ', elem, ' ', related)
-    """
 
     flow, path = solver_pt1(cm, start='AA', minutes=30)
     print('part 1 ', flow)
     #print('part 1 path ', path)
 
-    flow, path = solver_pt2(cm, start='AA', minutes=26)
+    flow, path, hist = solver_pt2(cm, start='AA', minutes=26)
     print('part 2 ', flow)
-    #print('part 2 path ', path)
+    print('part 2 path ', path)
+    print('part 2 hist ', hist)
 
 
 if __name__ == '__main__':
