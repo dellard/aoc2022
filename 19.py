@@ -82,11 +82,13 @@ def max_cracked(minutes_remaining):
 
 def solver1_dfs(blueprint, minutes, robots, supplies, seen):
 
+    spacer = ' '
+
     stack = []
     stack.append((minutes, robots, supplies))
 
     max_possibles = [max_cracked(x) for x in range(minutes + 1)]
-    print('MAX_POSSIBLES ', max_possibles)
+    # print('MAX_POSSIBLES ', max_possibles)
 
     highest_score = 0
     while stack:
@@ -99,7 +101,6 @@ def solver1_dfs(blueprint, minutes, robots, supplies, seen):
         seen[key] = 1
 
         (minutes, robots, supplies) = key
-        spacer = ' ' * (24 - minutes)
 
         if minutes < 2:
             if minutes == 0:
@@ -140,7 +141,7 @@ def solver1_dfs(blueprint, minutes, robots, supplies, seen):
 
             continue
 
-        print('%smin %d r %s s %s' % (spacer, minutes, str(robots), str(supplies)))
+        # print('%smin %d r %s s %s' % (spacer, minutes, str(robots), str(supplies)))
 
         factory_choices = blueprint.new_robots(supplies)
         # print('FACT ', factory_choices)
