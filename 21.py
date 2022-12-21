@@ -11,12 +11,8 @@ import sys
 def reader():
 
     monkeys = {}
-    deps = {}
-    constants = []
-    operators = []
 
     for line in sys.stdin:
-
         tokens = line.strip().split()
         tokens[0] = re.sub(':', '', tokens[0])
 
@@ -29,8 +25,6 @@ def reader():
 
 
 def monkey_eval(monkeys, root_name):
-
-    # fill in any known constants
 
     root = monkeys[root_name]
 
@@ -56,43 +50,64 @@ def monkey_eval(monkeys, root_name):
 
 def part2(monkeys, root_name):
 
-    # We're going to be destructive
+    # We're going to be destructive, so always mount
+    # a scratch monkey
     #
     monkeys = copy.deepcopy(monkeys)
 
-    monkeys['humn'] = 'HUMAN'
-
+    # assumption: the root node isn't the human.
+    # Then we would be godlike and could name
+    # any value.
+    #
     root = monkeys[root_name]
 
+    # Replace the 'human' node with 'HUMAN', and then
+    # try to eval the left and right, using the modified
+    # evaluator that recognizes the 'HUMAN' value.
+    # One of these will evaluate to a human, and the
+    # other will evaluate to 'HUMAN'.
+    #
+    # Important note: while the evaluation is going on,
+    # the monkeys are being rewritten to simplify the
+    # resulting expression by substituting every subtree
+    # that can be replaced with a constant value with
+    # that constant value.  So if we had an "monkey-tree"
+    # that looked like ((2 + 2) * ((3 * 4) + HUMAN))
+    # the subexpressions 2 + 2 and 3 * 4 would be
+    # replaced with their values, leaving just
+    # (4 * (12 + HUMAN))
+    #
+    monkeys['humn'] = 'HUMAN'
     left_val = monkey_eval2(monkeys, root[0])
     right_val = monkey_eval2(monkeys, root[2])
 
     if left_val == 'HUMAN':
-        value = right_val
-        unknown = root[0]
+        value, unknown = right_val, root[0]
     else:
-        value = left_val
-        unknown = root[2]
-
-    print('left ', left_val, ' right ', right_val)
-
-    #for i in range(299, 305, 1):
-    #    monkeys['humn'] = i
-    #    print('eval at %d is %d' % (i, monkey_eval(monkeys, unknown)))
-
-    monkeys['humn'] = 'HUMAN'
-    #print('expr ', expr_to_str(monkeys, unknown))
-
-    #for i in range(0, 10000, 1000):
-    #    monkeys['humn'] = i
-    #    print('eval at %d is %d' % (i, monkey_eval(monkeys, root[0])))
+        value, unknown = left_val, root[2]
 
     candidate = solver(monkeys, unknown, value)
 
+    # Now we have a candidate value.
+    #
+    # HOWEVER, the solution is not necessarily unique,
+    # because of rounding in integer division.  The
+    # problem description says that you need to supply
+    # "the" answer, but what do we do when there is
+    # more than one?  Could we return any of them?
+    # Or just the smallest?
+    #
+    # Let's check the candidate by plugging it back
+    # into the monkey tree and seeing what value it
+    # evaluates to.
+    #
     monkeys['humn'] = candidate
-    print('eval at %d is %d' % (candidate, monkey_eval(monkeys, unknown)))
-    print('value is %d' % value)
-
+    check = monkey_eval(monkeys, unknown)
+    if check == value:
+        return candidate
+    else:
+        print('UH-OH.  Not a unique solution?')
+        return -1
 
 
 def expr_to_str(monkeys, root_name):
@@ -114,8 +129,6 @@ def expr_to_str(monkeys, root_name):
 
 def solver(monkeys, root_name, value):
 
-    print('value ', value)
-
     root = monkeys[root_name]
     if isinstance(root, str):
         return value
@@ -134,40 +147,43 @@ def solver(monkeys, root_name, value):
         if isinstance(left, int):
             value -= left
             return solver(monkeys, root[2], value)
-        elif isinstance(right, int):
+        else:
             value -= right
             return solver(monkeys, root[0], value)
     elif operator == '-':
         if isinstance(left, int):
             value = -(value - left)
             return solver(monkeys, root[2], value)
-        elif isinstance(right, int):
-            value = value + right
+        else:
+            value += right
             return solver(monkeys, root[0], value)
     elif operator == '*':
         if isinstance(left, int):
-            value = value // left
+            value //= left
             return solver(monkeys, root[2], value)
-        elif isinstance(right, int):
-            value = value // right
+        else:
+            value //= right
             return solver(monkeys, root[0], value)
     elif operator == '/':
         if isinstance(right, int):
-            value = value * right
+            value *= right
             return solver(monkeys, root[0], value)
-        elif isinstance(left, int):
-            print('WHAT?')
+        else:
+            print('WARNING: this could lead to problems?')
             value = left / value
             return solver(monkeys, root[2], value)
     else:
-        print('OOPS op %s %s %s' % (left_name, operator, right_name))
+        print('OOPS op %s' % operator)
         return value
-
 
 
 def monkey_eval2(monkeys, root_name):
 
-    # fill in any known constants
+    # Like monkey_eval, but simplifies the monkey tree
+    # as it goes, turning constant sub-trees into ints.
+    #
+    # Returns 'HUMAN' for any tree containing a variable
+    # (the human-supplied input)
 
     root = monkeys[root_name]
 
@@ -198,16 +214,22 @@ def monkey_eval2(monkeys, root_name):
     return val
 
 
-
 def main():
 
     monkeys = reader()
-    # print(monkeys)
+
+    # Note: we could just use monkey_eval2 instead of
+    # monkey_eval, as long as we make sure to make a
+    # copy of the tree first.  We don't really *need*
+    # to have two functions that are so similar.
+    #
+    # (or whether monkey_eval2 is destructive could also
+    # be a parameter, or it could construct a new tree
+    # of its own, or...)
 
     print('part 1: %d' % monkey_eval(monkeys, 'root'))
+    print('part 2: %d' % part2(monkeys, 'root'))
 
-    part2(monkeys, 'root')
-    # print('part 2: %d' % monkey_eval2(monkeys, 'root'))
 
 if __name__ == '__main__':
     main()
