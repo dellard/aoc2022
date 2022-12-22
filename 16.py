@@ -173,7 +173,8 @@ def solver_pt1(cave, start='AA', minutes=30):
 
 def extend_2a(
         cave, node0, dist0, node1, dist1,
-        visited, current_total, minutes):
+        visited, current_total, minutes,
+        scores):
 
     #spacer = ' ' * (30 - minutes)
     #
@@ -189,6 +190,23 @@ def extend_2a(
     base_total = current_total
     highest_total = base_total
     highest_path = visited
+
+    # heuristic: consider the current set of visited nodes,
+    # along with node0 and node1.  If we've gotten a higher
+    # score for this state, then there's no point in
+    # continuing this search -- we already found a better
+    # solution elsewhere.
+    #
+    state = '.'.join(sorted(visited)) + '/' + '.'.join(sorted([node0, node1]))
+    # state = (tuple(sorted(visited)), tuple(sorted([node0, node1])))
+    if state not in scores:
+        scores[state] = current_total
+    else:
+        if current_total < scores[state]:
+            # print('ABANDONING at %d' % minutes)
+            return current_total, visited
+        else:
+            scores[state] = current_total
 
     if dist0 == 0:
         for neighbor, distance in cave.paths[node0]:
@@ -222,7 +240,7 @@ def extend_2a(
                     neighbor, 1 + distance - elapsed,
                     node1, dist1 - elapsed,
                     visited + [neighbor], current_total + added_flow,
-                    minutes - elapsed)
+                    minutes - elapsed, scores)
                     #(next_minutes - 1) - elapsed)
 
             if highest_total <= new_total:
@@ -232,7 +250,8 @@ def extend_2a(
                 cave,
                 node1, dist1,
                 node0, dist0,
-                visited, current_total, minutes)
+                visited, current_total,
+                minutes, scores)
 
         if highest_total <= new_total:
             highest_total, highest_path = new_total, new_path
@@ -242,7 +261,8 @@ def extend_2a(
                 cave,
                 node0, dist0 - 1,
                 node1, dist1 - 1,
-                visited, current_total, minutes - 1)
+                visited, current_total,
+                minutes - 1, scores)
  
         if highest_total <= new_total:
             highest_total, highest_path = new_total, new_path
@@ -258,8 +278,11 @@ def solver_pt2(cave, start='AA', minutes=26):
     return highest_flow, highest_path, highest_hist
     """
 
+    scores = {}
+
     highest_flow, highest_path = extend_2a(
-            cave, start, 0, start, 0, [start], 0, minutes)
+            cave, start, 0, start, 0, [start], 0,
+            minutes, scores)
     return highest_flow, highest_path
 
 
