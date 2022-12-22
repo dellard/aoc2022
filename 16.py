@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import copy
-import itertools
 import re
 import sys
 
@@ -296,10 +294,12 @@ def main():
         print(valves[vname])
     """
 
+    """
     for elem in cm.paths:
         related = ', '.join(['%s/d%d/r%d' % (v[0], v[1], valves[v[0]].rate) for v in cm.paths[elem]])
         #print('node ', elem, ' ', str(cm.paths[elem]))
         print('node ', elem, ' ', related)
+    """
 
     flow, path = solver_pt1(cm, start='AA', minutes=30)
     print('part 1: ', flow)
@@ -308,7 +308,7 @@ def main():
     #flow, path, hist = solver_pt2(cm, start='AA', minutes=26)
     flow, path = solver_pt2(cm, start='AA', minutes=26)
     print('part 2 ', flow)
-    print('part 2 path ', path)
+    # print('part 2 path ', path)
     # print('part 2 hist ', hist)
 
 
