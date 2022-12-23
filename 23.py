@@ -139,7 +139,7 @@ def round_step1(elves, round_number):
 
     move_order = move_order[base:base + n_directions]
     test_order = test_order[base:base + n_directions]
-    print('TEST ORDER ', test_order)
+    # print('TEST ORDER ', test_order)
     # print('moves %d %d %s' % (base, round_number, move_order))
 
     proposed_spots = set()
@@ -193,23 +193,43 @@ def print_elves(elves):
     print(''.join(buf))
 
 
+def part1(elves):
+
+    for rnd in range(10):
+        elves = round_step1(elves, rnd)
+
+    area, min_p, max_p = find_extent(elves)
+    # print('min_p ', min_p)
+    # print('max_p ', max_p)
+    # print('occupied ', len(elves))
+    return area - len(elves)
+
+
+def part2(elves):
+
+    rnd = 0
+    while True:
+        new_elves = round_step1(elves, rnd)
+        rnd += 1
+
+        if elves == new_elves:
+            break
+
+        elves = new_elves
+
+    return rnd
+
+
 def main():
 
     elves = reader()
 
-    print_elves(elves)
-    print('============')
+    #print_elves(elves)
+    #print('============')
 
-    for rnd in range(10):
-        elves = round_step1(elves, rnd)
-        # print_elves(elves)
-        print('============')
+    print('part 1: %d' % part1(elves))
+    print('part 2: %d' % part2(elves))
 
-    area, min_p, max_p = find_extent(elves)
-    print('min_p ', min_p)
-    print('max_p ', max_p)
-    print('occupied ', len(elves))
-    print('part 1: %d' % (area - len(elves)))
 
 
 
