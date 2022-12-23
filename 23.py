@@ -116,7 +116,7 @@ def neighbor_count(elves, pos):
     cnt = 0
     for x in range(p_x - 1, p_x + 2, 1):
         for y in range(p_y - 1, p_y + 2, 1):
-            if x == y:
+            if x == p_x and y == p_y:
                 continue
             if (x, y) in elves:
                 cnt += 1
@@ -200,12 +200,10 @@ def main():
     print_elves(elves)
     print('============')
 
-    elves = round_step1(elves, 0)
-    print_elves(elves)
-    print('============')
-    elves = round_step1(elves, 1)
-    print_elves(elves)
-    print('============')
+    for rnd in range(10):
+        elves = round_step1(elves, rnd)
+        # print_elves(elves)
+        print('============')
 
     area, min_p, max_p = find_extent(elves)
     print('min_p ', min_p)
