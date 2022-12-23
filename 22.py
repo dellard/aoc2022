@@ -13,6 +13,79 @@ class Tiles:
         self.max_x = max([len(r) for r in rows])
         self.max_y = len(rows)
 
+        self.cube_height, self.cube_width, self.cube_len = self.find_cube()
+        print('cube len ', self.cube_len)
+
+
+    def find_cube(self):
+        # The cube will unroll into a 5x2 or 4x3 grid
+        # (or the corresponding grid rotated one quarter
+        # turn)
+
+        mx = self.max_x - 2
+        my = self.max_y - 2
+
+        if mx * 5 == my * 2:
+            cube_width = 2
+            cube_height = 5
+            cube_len = mx // 2
+        elif mx * 2 == my * 5:
+            cube_width = 5
+            cube_height = 2
+            cube_len = my // 2
+        elif mx * 4 == my * 3:
+            cube_width = 3
+            cube_height = 4
+            cube_len = mx // 3
+        elif mx * 3 == my * 4:
+            cube_width = 4
+            cube_height = 3
+            cube_len = mx // 4
+        else:
+            print('WHAT?')
+
+        for x in range(cube_width):
+            pos_x = x * cube_len + 1
+            for y in range(cube_height):
+                pos_y = y * cube_len + 1
+
+                if self.rows[pos_y][pos_x] != ' ':
+                    print('got (%d, %d)' % (x, y))
+        return cube_width, cube_height, cube_len
+
+    def find_edge(self, pos, delta):
+        """
+        Not well named.  FIXME.
+
+        Only call when you are about to fall off the edge.
+        Does not work for general positions!
+        """
+
+        pos_x, pos_y = pos
+
+        # try wrapping first
+        if pos_x == 1 and delta == (-1, 0):
+            if self.rows[pos_y][self.cube_width * self.cube_len] != ' ':
+                new_pos = (self.cube_width * self.cub_len, pos_y)
+                return new_pos, delta
+
+        if pos_x == (self.cube_width * self.cube_len) and delta == (1, 0):
+            if self.rows[pos_y][1] != ' ':
+                new_pos = (1, cub_len, pos_y)
+                return new_pos, delta
+
+        if pos_y == 1 and delta == (0, -1):
+            if self.rows[self.cube_height * self.cube_len][x_pos] != ' ':
+                new_pos = (pos_x, self.cube_width * self.cub_len)
+                return new_pos, delta
+
+        if pos_y == (self.cube_height * self.cube_len) and delta == (0, 1):
+            if self.rows[1][x_pos] != ' ':
+                new_pos = (pos_x, 1)
+                return new_pos, delta
+
+        # if that didn't work, it's painful.
+
     def next_x(self, x, step):
         return (x + step) % self.max_x
 
@@ -112,7 +185,7 @@ def reader():
     return rows, list(zip(magnitudes, directions + ['S'])), start
 
 
-def move(tiles, pos, delta):
+def move_2d(tiles, pos, delta):
 
     p_x, p_y = pos
 
@@ -137,6 +210,48 @@ def move(tiles, pos, delta):
         return pos
     else:
         return (next_x, next_y)
+
+
+def move_3d(tiles, pos, delta, cube):
+
+    print('pos ', pos)
+
+    p_x, p_y = pos
+
+    if tiles.rows[p_y][p_x] not in '.o<>^v':
+        print('WHOOPS!  off the grid (%d, %d)' % (p_x, p_y))
+        return pos, delta
+
+    next_x, next_y = tiles.next_p(pos, delta)
+    if tiles.rows[next_y][next_x] in '.o<>^v':
+        return (next_x, next_y), delta
+    elif tiles.rows[next_y][next_x] == '#':
+        return pos, delta
+
+    # We're attempting to cross an edge on the cube.
+    # Update the next_x and next_y accordingly, but
+    # update the delta because any subsequent
+    # moves may be in a different direction.
+
+    # TODO: we can't lazily hardwire the cube
+
+    if delta == (1, 0):
+        next_x, next_y = next_y, 1
+    elif delta == (-1, 0):
+        # incomplete
+        pass
+
+    while tiles.rows[next_y][next_x] == ' ':
+        next_x, next_y = tiles.next_p((next_x, next_y), delta)
+
+    if tiles.rows[next_y][next_x] == '#':
+        # there's a wall on the other side of the edge;
+        # don't cross the edge, and don't change direction
+        #
+        return pos, delta
+    else:
+        return (next_x, next_y), new_direction
+
 
 
 def print_tiles(tiles):
