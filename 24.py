@@ -1,11 +1,22 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 24
+"""
 
 import re
 import sys
 
+# I've capitulated and am using an external library
+# in order to get efficient 2d arrays
+#
+import numpy
+
 
 def reader():
+    """
+    Read the input; set up initial data structures
+    """
 
     rows = []
     for line in sys.stdin:
@@ -41,6 +52,9 @@ def reader():
 
 
 class Valley:
+    """
+    Represents the state of the valley
+    """
 
     def __init__(self, blizzards, n_rows, n_cols, entrance):
 
@@ -48,7 +62,7 @@ class Valley:
         self.n_cols = n_cols
         self.entrance = entrance
 
-        print('n_rows %d n_cols %d' % (n_rows, n_cols))
+        # print('n_rows %d n_cols %d' % (n_rows, n_cols))
 
         # Make lists, for each row and each column,
         # of just the blizzards that move along that
@@ -61,22 +75,20 @@ class Valley:
         #
         row_blizzards = [[]] * n_rows
         col_blizzards = [[]] * n_cols
-        print(row_blizzards)
-        print(col_blizzards)
+        # print(row_blizzards)
+        # print(col_blizzards)
 
         for bliz in blizzards:
             if bliz.direction in '<>':
-                print(bliz.pos)
+                # print(bliz.pos)
                 row_blizzards[bliz.pos[1]].append(bliz)
             else:
-                print(bliz.pos)
+                # print(bliz.pos)
                 col_blizzards[bliz.pos[0]].append(bliz)
 
         self.row_blizzards = row_blizzards
         self.col_blizzards = col_blizzards
-
-        # That was the old way of managing the blizzards.
-        # We need a faster way.
+        self.blizzards = blizzards
 
     def pos_ok(self, pos, minute):
 
@@ -119,12 +131,6 @@ class Blizzard:
         else:
             print('OOPS')
 
-    def move_one(self):
-        # Not sure if this is useful
-
-        self.pos = ((self.pos[0] + self.delta[0]) % self.n_cols,
-                    (self.pos[1] + self.delta[1]) % self.n_rows)
-
     def where_n(self, n_mins):
         """
         Where will this storm be n_mins after the start?
@@ -134,8 +140,21 @@ class Blizzard:
                 (self.pos[1] + (n_mins * self.delta[1])) % self.n_rows)
 
 
-def print_valley(bliz, minute, n_rows, n_cols, p_x, p_y):
-    pass
+def make_storm_state(valley, minute):
+    """
+    Make a snapshot of which grid positions in the valley are
+    occupied by storms at any given minute
+
+    A bit of brute force here.
+    """
+
+    grid = numpy.zeros((valley.n_cols, valley.n_rows), numpy.int8)
+
+    for bliz in valley.blizzards:
+        pos = bliz.where_n(minute)
+        grid[pos] = 1
+
+    return grid
 
 
 def part1_search(valley, start_pos, end_pos, start_minute=0):
@@ -151,23 +170,43 @@ def part1_search(valley, start_pos, end_pos, start_minute=0):
     queue = []
     seen = set()
 
+    states = {}
+
     queue.append((start_pos, start_minute))
 
     while queue:
         pos, minute = queue.pop(0)
 
+        if (minute + 1) not in states:
+            states[minute + 1] = make_storm_state(valley, minute + 1)
+
+        storm_state = states[minute + 1]
+
         p_x, p_y = pos
 
         # Oops; we shouldn't be here at all
-        if not valley.pos_ok(pos, minute):
-            print('oops')
-            continue
+        #if not valley.pos_ok(pos, minute):
+        #    print('oops')
+        #    continue
 
-        # no fair tunneling along the border
-        #
-        if p_y == -1 and p_x != start_pos[0]:
-            continue
-        if p_y == valley.n_rows and p_x != start_pos[0]:
+        if pos == start_pos:
+            if p_y == -1 and not storm_state[p_x, p_y + 1]:
+                cand = ((p_x, p_y + 1), minute + 1)
+                if cand not in seen:
+                    seen.add(cand)
+                    queue.append(cand)
+            elif p_y == valley.n_rows and not storm_state[p_x, p_y - 1]:
+                cand = ((p_x, p_y - 1), minute + 1)
+                if cand not in seen:
+                    seen.add(cand)
+                    queue.append(cand)
+
+            cand = ((p_x, p_y), minute + 1)
+            if cand not in seen:
+                seen.add(cand)
+                queue.append(cand)
+
+            # No point in examining the other options
             continue
 
         #print('trying pos %s minute %d' % (pos, minute))
@@ -177,32 +216,32 @@ def part1_search(valley, start_pos, end_pos, start_minute=0):
             # hooray.  We're out.
             return minute + 1
 
-        if p_x > 0 and valley.pos_ok((p_x - 1, p_y), minute + 1):
+        if p_x > 0 and not storm_state[p_x - 1, p_y]:
             cand = ((p_x - 1, p_y), minute + 1)
             if cand not in seen:
                 seen.add(cand)
                 queue.append(cand)
 
-        if p_x + 1 < valley.n_cols and valley.pos_ok((p_x + 1, p_y), minute + 1):
+        if p_x + 1 < valley.n_cols and not storm_state[p_x + 1, p_y]:
             cand = ((p_x + 1, p_y), minute + 1)
             if cand not in seen:
                 seen.add(cand)
                 queue.append(cand)
 
-        if p_y > 0 and valley.pos_ok((p_x, p_y - 1), minute + 1):
+        if p_y > 0 and not storm_state[p_x, p_y - 1]:
             cand = ((p_x, p_y - 1), minute + 1)
             if cand not in seen:
                 seen.add(cand)
                 queue.append(cand)
 
-        if p_y + 1 < valley.n_rows and valley.pos_ok((p_x, p_y + 1), minute + 1):
+        if p_y + 1 < valley.n_rows and not storm_state[p_x, p_y + 1]:
             cand = ((p_x, p_y + 1), minute + 1)
             if cand not in seen:
                 seen.add(cand)
                 queue.append(cand)
 
         # Hang out here and wait for things to blow over.
-        if valley.pos_ok((p_x, p_y), minute + 1):
+        if not storm_state[p_x, p_y]:
             cand = ((p_x, p_y), minute + 1)
             if cand not in seen:
                 seen.add(cand)
@@ -218,7 +257,7 @@ def main():
     valley, entr_x, exit_x = reader()
     minutes0 = part1_search(
             valley, (entr_x, -1), (exit_x, valley.n_rows - 1),
-            start_minute=0))
+            start_minute=0)
     print('part 1: ', minutes0)
 
     valley.entrance = (exit_x, valley.n_rows)
