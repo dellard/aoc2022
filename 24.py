@@ -82,7 +82,7 @@ class Valley:
             if bliz.where_n(minute) == pos:
                 return False
 
-        for col_b in self.col_blizzards[p_x]:
+        for bliz in self.col_blizzards[p_x]:
             if bliz.where_n(minute) == pos:
                 return False
 
@@ -146,18 +146,24 @@ def part1_search(valley, start_pos, end_pos):
     while queue:
         pos, minute = queue.pop(0)
 
-        print('trying pos %s minute %d' % (pos, minute))
+        p_x, p_y = pos
 
         # Oops; we shouldn't be here at all
         if not valley.pos_ok(pos, minute):
             print('oops')
             continue
 
+        # no fair tunneling along the border
+        #
+        if p_y == -1 and p_x != start_pos[0]:
+            continue
+
+        print('trying pos %s minute %d' % (pos, minute))
+        print('queue length %d' % len(queue))
+
         if pos == end_pos:
             # hooray.  We're out.
             return minute + 1
-
-        p_x, p_y = pos
 
         if p_x > 0 and valley.pos_ok((p_x - 1, p_y), minute + 1):
             cand = ((p_x - 1, p_y), minute + 1)
@@ -190,6 +196,8 @@ def part1_search(valley, start_pos, end_pos):
                 seen.add(cand)
                 queue.append(cand)
 
+        #print('---- ----')
+
     print('SEARCH FAILED!')
 
 
@@ -197,7 +205,7 @@ def main():
 
     valley, entr_x, exit_x = reader()
 
-    print('part 1: ', part1_search(valley, (entr_x, -1), (exit_x, valley.n_rows)))
+    print('part 1: ', part1_search(valley, (entr_x, -1), (exit_x, valley.n_rows - 1)))
 
 
 if __name__ == '__main__':
