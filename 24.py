@@ -37,15 +37,16 @@ def reader():
                 blizzards.add(
                         Blizzard(p_x, p_y, rows[p_y][p_x], n_rows, n_cols))
 
-    return Valley(blizzards, n_rows, n_cols), entr_x, exit_x
+    return Valley(blizzards, n_rows, n_cols, (entr_x, -1)), entr_x, exit_x
 
 
 class Valley:
 
-    def __init__(self, blizzards, n_rows, n_cols):
+    def __init__(self, blizzards, n_rows, n_cols, entrance):
 
         self.n_rows = n_rows
         self.n_cols = n_cols
+        self.entrance = entrance
 
         print('n_rows %d n_cols %d' % (n_rows, n_cols))
 
@@ -74,9 +75,18 @@ class Valley:
         self.row_blizzards = row_blizzards
         self.col_blizzards = col_blizzards
 
+        # That was the old way of managing the blizzards.
+        # We need a faster way.
+
     def pos_ok(self, pos, minute):
 
+        if pos == self.entrance:
+            return True
+
         p_x, p_y = pos
+
+        if p_x < 0 or p_x >= self.n_cols or p_y < 0 or p_y >= self.n_rows:
+            return False
 
         for bliz in self.row_blizzards[p_y]:
             if bliz.where_n(minute) == pos:
@@ -128,7 +138,7 @@ def print_valley(bliz, minute, n_rows, n_cols, p_x, p_y):
     pass
 
 
-def part1_search(valley, start_pos, end_pos):
+def part1_search(valley, start_pos, end_pos, start_minute=0):
 
     # Note: although the instructions don't seem to mention
     # it, there are never any vertical blizzards on the entrance
@@ -141,7 +151,7 @@ def part1_search(valley, start_pos, end_pos):
     queue = []
     seen = set()
 
-    queue.append((start_pos, 0))
+    queue.append((start_pos, start_minute))
 
     while queue:
         pos, minute = queue.pop(0)
@@ -157,9 +167,11 @@ def part1_search(valley, start_pos, end_pos):
         #
         if p_y == -1 and p_x != start_pos[0]:
             continue
+        if p_y == valley.n_rows and p_x != start_pos[0]:
+            continue
 
-        print('trying pos %s minute %d' % (pos, minute))
-        print('queue length %d' % len(queue))
+        #print('trying pos %s minute %d' % (pos, minute))
+        #print('queue length %d' % len(queue))
 
         if pos == end_pos:
             # hooray.  We're out.
@@ -204,8 +216,25 @@ def part1_search(valley, start_pos, end_pos):
 def main():
 
     valley, entr_x, exit_x = reader()
+    minutes0 = part1_search(
+            valley, (entr_x, -1), (exit_x, valley.n_rows - 1),
+            start_minute=0))
+    print('part 1: ', minutes0)
 
-    print('part 1: ', part1_search(valley, (entr_x, -1), (exit_x, valley.n_rows - 1)))
+    valley.entrance = (exit_x, valley.n_rows)
+    minutes1 = part1_search(
+            valley, (exit_x, valley.n_rows), (entr_x, 0),
+            start_minute=minutes0)
+    print('after minutes1 ', minutes1)
+
+    valley.entrance = (entr_x, -1)
+    minutes2 = part1_search(
+            valley, (entr_x, -1), (exit_x, valley.n_rows - 1),
+            start_minute=minutes1)
+    print('after minutes2 ', minutes2)
+
+    total = minutes2
+    print('part 2: ', minutes2)
 
 
 if __name__ == '__main__':
