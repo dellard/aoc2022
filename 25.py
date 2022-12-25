@@ -1,10 +1,19 @@
 #!/isr/bin/env python3
 
+"""
+Advent of Code, 2022 -- day 25
+"""
 
 import sys
 
-class Snafu:
 
+class Snafu:
+    """
+    Convenience class for the SNAFU decoder/encoder
+    """
+
+    # SNAFU digits to their integer equivalents
+    #
     DIGIT2VAL = {
             '2' : 2,
             '1' : 1,
@@ -13,6 +22,8 @@ class Snafu:
             '=' : -2
             }
 
+    # Decimal numbers to their SNAFU digit equivalents
+    #
     VAL2DIGIT = {
             2: '2',
             1: '1',
@@ -23,15 +34,15 @@ class Snafu:
 
     @staticmethod
     def sn2int(text):
-
-        # print('text ', text)
+        """
+        Convert a SNAFU text into an integer
+        """
 
         power = 1
         total = 0
 
-        digits = [c for c in text]
+        digits = list(text)
         digits.reverse()
-        # print('digits ', digits)
 
         for digit in digits:
             dval = Snafu.DIGIT2VAL[digit]
@@ -42,13 +53,24 @@ class Snafu:
 
     @staticmethod
     def int2sn(value):
-
-        # this is the tricky part
+        """
+        Convert an integer into a SNAFU text
+        """
 
         power = 1
         digits = []
 
         while value:
+            # this is the tricky part: add 2,
+            # then take the mod and subtract 2
+            # again, to bring the mod from 0..4
+            # to -2..2
+            #
+            # But then, if this made the remainder
+            # "negative", it means that we had to
+            # borrow from the modulo of the next
+            # higher power, so add it back
+            #
             t_val = value + 2
             rem = (t_val % 5) - 2
             digits.append(rem)
@@ -63,7 +85,10 @@ class Snafu:
 
 
 def reader():
-
+    """
+    Read SNAFU numbers, one per line, from stdin,
+    and return list of equivalent integers
+    """
 
     vals = []
     for line in sys.stdin:
@@ -73,20 +98,14 @@ def reader():
 
 
 def main():
+    """
+    Find the test values for day 25
+    """
 
     vals = reader()
     total = sum(vals)
-    # print(vals)
     print('part 1: ', Snafu.int2sn(total))
-
-    """
-    print('====')
-    for v in vals:
-        print('%20s %d' % (Snafu.int2sn(v), v))
-    """
 
 
 if __name__ == '__main__':
     main()
-
-
