@@ -221,10 +221,11 @@ def main():
     moves = reader()
 
     print('part 1: %d' % part1(moves, (0, 0)))
-    print('part 2: %d' % part2(moves, (0, 0), 10))
 
     # redo part1 using the generalized method for n knots
-    print('part 1 redone: %d' % part2(moves, (0, 0), 2))
+    # print('part 1 redone: %d' % part2(moves, (0, 0), 2))
+
+    print('part 2: %d' % part2(moves, (0, 0), 10))
 
 
 if __name__ == '__main__':
