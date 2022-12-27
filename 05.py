@@ -4,9 +4,9 @@ import copy
 import sys
 
 
-def reader(n_cols):
+def reader():
 
-    stacks = [list() for i in range(n_cols)]
+    stacks = None
 
     # assumption 1
     # important note: in the input, all of first
@@ -34,21 +34,25 @@ def reader(n_cols):
     #
     for line in sys.stdin:
         # remove the newline, in a lazy manner
+        # Note that we don't want to just do an rstrip
+        # because we might need that trailing whitespace
+        # (to figure out how many columns there are
+        #
         line = line[:-1]
 
-        # assumption1 + assumption 2
-        num_cols = int((1 + len(line)) / 4)
-
-        print('num_cols = %d' % num_cols)
+        # If it's the first line, figure out how many
+        # stacks there are going to be by looking at the
+        # length of the line
+        #
+        if not stacks:
+            n_cols = (len(line) + 1) // 4
+            stacks = [[] for i in range(n_cols)]
 
         # when we're done seeing stacks, break
         # out of this loop
         #
         if not line.strip().startswith('['):
             break
-
-        if num_cols != n_cols:
-            print('oops 1')
 
         for i in range(n_cols):
 
@@ -59,10 +63,12 @@ def reader(n_cols):
             if item != ' ':
                 stacks[i].append(item)
 
+    """
     for i in range(n_cols):
         print(stacks[i])
+    """
 
-    commands = list()
+    commands = []
 
     for line in sys.stdin:
         tokens = line.strip().split()
@@ -70,6 +76,9 @@ def reader(n_cols):
             continue
 
         # the laziness is palpable here
+        # could have just used a regexp to find all the
+        # ints
+        #
         cmd = [int(tokens[x]) for x in [1, 3, 5]]
         commands.append(cmd)
 
@@ -79,8 +88,10 @@ def reader(n_cols):
 def do_command9000(stacks, command):
     return do_command(stacks, command, rev=True)
 
+
 def do_command9001(stacks, command):
     return do_command(stacks, command, rev=False)
+
 
 def do_command(stacks, command, rev=True):
 
@@ -101,25 +112,23 @@ def do_command(stacks, command, rev=True):
     return stacks
 
 
-stacks, commands = reader(9)
+def main():
 
-#print(stacks)
-#print(commands)
+    stacks, commands = reader()
 
-stacks0 = copy.copy(stacks)
-stacks1 = copy.copy(stacks)
+    stacks0 = copy.copy(stacks)
+    stacks1 = copy.copy(stacks)
 
-for command in commands:
-    stacks0 = do_command9000(stacks0, command)
+    for command in commands:
+        stacks0 = do_command9000(stacks0, command)
 
-print('part 1 - - - -')
-for stack in stacks0:
-    print(stack[0])
+    print('part 1:', ''.join(stack[0] for stack in stacks0))
 
-for command in commands:
-    stacks1 = do_command9001(stacks1, command)
+    for command in commands:
+        stacks1 = do_command9001(stacks1, command)
 
-print('part 2 - - - -')
-for stack in stacks1:
-    print(stack[0])
+    print('part 2:', ''.join(stack[0] for stack in stacks1))
 
+
+if __name__ == '__main__':
+    main()
