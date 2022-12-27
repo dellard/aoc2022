@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 7
+"""
+
 import sys
 
 class DirNode:
@@ -29,11 +33,11 @@ class FileNode:
 def reader():
 
     path_sep = '/'
-    known_nodes = dict()
+    known_nodes = {}
 
     curr_path = ''
-    curr_dirs = list()
-    curr_files = list()
+    curr_dirs = []
+    curr_files = []
     in_ls = False
 
     for line in sys.stdin:
@@ -53,8 +57,8 @@ def reader():
                     known_nodes[curr_path] = (curr_dirs, curr_files)
                     # print('%s -> %s %s' % (curr_path, str(curr_dirs), str(curr_files)))
 
-                    curr_dirs = list()
-                    curr_files = list()
+                    curr_dirs = []
+                    curr_files = []
                     in_ls = False
 
                 if tokens[2] == '/':
@@ -131,6 +135,7 @@ def find_sum_of_smalls(sizes, max_size):
 
     return total
 
+
 def find_smallest_above(sizes, target):
 
     candidate_size = -1
@@ -154,17 +159,18 @@ def main():
     nodes = reader()
     # print(nodes)
 
-    sizes = dict()
+    sizes = {}
     dir_walk(nodes, '/', sizes)
 
     #print(sizes)
+
+    print('part 1: %d' % find_sum_of_smalls(sizes, 100000))
 
     total_space_used = sizes['/']
     total_space_free = 70000000 - total_space_used
     needed_space = 30000000 - total_space_free
 
-    print('task 1: %d' % find_sum_of_smalls(sizes, 100000))
-    print('task 2: %d' % find_smallest_above(sizes, needed_space))
+    print('part 2: %d' % find_smallest_above(sizes, needed_space))
 
 
 if __name__ == '__main__':
