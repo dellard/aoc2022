@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 11
+"""
+
 import copy
 import re
 import sys
@@ -147,6 +151,7 @@ def do_round(monkeys, worry_factor=3, ring_modulus=0):
         monkey.do_turn(
                 monkeys, worry_factor=worry_factor, ring_modulus=ring_modulus)
 
+
 def do_trial(orig_monkeys, n_rounds, worry_factor=3, ring_modulus=0):
 
     # Always mount a scratch monkey!
@@ -210,31 +215,6 @@ def main():
     print('part 2: %d' % do_trial(
             base_monkeys, 10000, worry_factor=1, ring_modulus=ring_modulus))
 
-    # A test that the ring works...
-    # monkeys1a = copy.deepcopy(base_monkeys)
-    # for i in range(20):
-    #     do_round(monkeys1a, ring_modulus=ring_modulus)
-    #
-    # print('== == == ==')
-    # inspections = [m.inspections for m in monkeys1a]
-    # print('inspections %s' % inspections)
-    # inspections = sorted(inspections)
-    # business = inspections[-1] * inspections[-2]
-    # print('part 1a: %d' % business)
-
-    # Another test:
-    # monkeys2a = copy.deepcopy(base_monkeys)
-    #for i in range(20):
-    #    do_round(monkeys2a, worry_factor=1, ring_modulus=ring_modulus)
-    #
-    # print('== == == ==')
-    # inspections = [m.inspections for m in monkeys2a]
-    # print('inspections %s' % inspections)
-    # inspections = sorted(inspections)
-    # business = inspections[-1] * inspections[-2]
-    # print('part 2a: %d' % business)
-
 
 if __name__ == '__main__':
     main()
-
