@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 10
+"""
+
 import sys
 
 
@@ -87,8 +91,8 @@ def part2(program, crt_width):
 def main():
     prog = reader()
 
-    print('part 1 %d' % part1(prog, 20, 40))
-    print('part 2\n%s' % part2(prog, 40))
+    print('part 1: %d' % part1(prog, 20, 40))
+    print('part 2:\n%s' % part2(prog, 40))
 
 
 if __name__ == '__main__':

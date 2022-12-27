@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 """
+Advent of Code 2022, day 10
+
 When I started on part 1, I realized that the problem
 would be bit simpler if I rewrote the original program
 in terms of a more primitive machine with one instruction,
@@ -104,8 +106,8 @@ def part2(program, crt_width):
 def main():
     prog = reader()
 
-    print('part 1 %d' % part1(prog, 20, 40))
-    print('part 2\n%s' % part2(prog, 40))
+    print('part 1: %d' % part1(prog, 20, 40))
+    print('part 2:\n%s' % part2(prog, 40))
 
 
 if __name__ == '__main__':
