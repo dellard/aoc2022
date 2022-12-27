@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 14
+"""
+
 import copy
 import sys
 
@@ -182,4 +186,5 @@ def main():
     print('part 2: %d' % part2(cave))
 
 
-main()
+if __name__ == '__main__':
+    main()
