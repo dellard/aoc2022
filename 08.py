@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 8
+"""
+
+
 import sys
+
 
 def reader():
 
-    rows = list()
+    rows = []
     for line in sys.stdin:
         # assume that the input is properly formed
 
@@ -16,14 +22,13 @@ def reader():
 
     return rows
 
+
 def find_visible_linear(grid, start, step):
 
     seen = set()
 
     start_col, start_row = start
     step_col, step_row = step
-
-    # print('start (%d, %d) step (%d, %d)' % (start_col, start_row, step_col, step_row))
 
     # we're assuming the grid is square
 
@@ -39,7 +44,6 @@ def find_visible_linear(grid, start, step):
             highest_seen = elem
             seen.add((row, col))
 
-    # print(seen)
     return seen
 
 
@@ -76,9 +80,6 @@ def find_n_scenic(grid, row, col):
 
     score = visible_up * visible_down * visible_right * visible_left
 
-    #print('x %d y %d = %d %d %d %d => %d' % (
-    #        row, col, visible_right, visible_left, visible_up, visible_down, score))
-
     return score
 
 
@@ -111,16 +112,15 @@ def count_visible(grid):
         seen |= find_visible_linear(grid, (0, i), (1, 0))
         seen |= find_visible_linear(grid, (n_rows - 1, i), (-1, 0))
 
-    # print(seen)
     return len(seen)
 
 
 def main():
     grid = reader()
-    # print(grid)
 
     print('part 1: %d' % count_visible(grid))
     print('part 2: %d' % find_max_scenic(grid))
+
 
 if __name__ == '__main__':
     main()
