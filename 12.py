@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 12
+"""
+
 import re
 import sys
 
