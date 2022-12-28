@@ -43,7 +43,7 @@ def find_extent(positions):
     return area, (x_min, y_min), (x_max, y_max)
 
 
-# You have entered a region of dense copy/pasting.
+# You have entered a region of dense and repetitious copy/pasting.
 
 def move_n(pos):
     return pos[0], pos[1] - 1
@@ -62,19 +62,19 @@ def move_w(pos):
 
 
 def move_ne(pos):
-    return move_n(move_e(pos))
+    return pos[0] + 1, pos[1] - 1
 
 
 def move_nw(pos):
-    return move_n(move_w(pos))
+    return pos[0] - 1, pos[1] - 1
 
 
 def move_se(pos):
-    return move_s(move_e(pos))
+    return pos[0] + 1, pos[1] + 1
 
 
 def move_sw(pos):
-    return move_s(move_w(pos))
+    return pos[0] - 1, pos[1] + 1
 
 
 def occ(elves, pos):
@@ -247,8 +247,6 @@ def main():
 
     print('part 1: %d' % part1(elves))
     print('part 2: %d' % part2(elves))
-
-
 
 
 if __name__ == '__main__':
