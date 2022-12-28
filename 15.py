@@ -51,7 +51,7 @@ problems:
         were a lot of elements that needed to be
         examined closely because they contained a
         "border" between covered and uncovered
-        regions.  It cut down the search space 
+        regions.  It cut down the search space
         by two orders of magnitude, more or less,
         but I needed a lot more than that.  It would
         take less hour or so to run, perhaps -- but
@@ -103,7 +103,12 @@ areas that *might* be uncovered.  For my test
 data, this decreased the search space from
 4M x 4M to about 4.5M, which is a big help.
 Then we just have to scan through the remaining
-4.5M elements and find the first that's uncovered.
+4.5M elements and find the first that's uncovered,
+and we can prune these back a bit as well.
+
+I'm certain that I'm missing some method that
+would make this much faster, but I don't know
+what it is.
 
 """
 
@@ -173,18 +178,79 @@ def find_row_cov(sb_pairs, min_pos, max_pos, row_n, inc_beacons=False):
     return offsets
 
 
-def find_annulus(center_x, center_y, radius):
+def find_annulus(
+        sb_info,
+        center_x, center_y, radius,
+        min_x, min_y, max_x, max_y):
+    """
+    This is a lot more complicated than it needs to be,
+    because I'm trying to prune the canidates as much
+    as possible.  It's not very successful, however.
+
+    What this function does is return the annulus around
+    a given center at the given radius.  To reduce the
+    search space a bit, it ignores any points that are
+    outside the min/max bounding box.
+
+    As a second optimization, it omits any of the
+    segments of the annulus that are completely inside
+    one of the other sensor detection areas.  This doesn't
+    help all that much either.
+    """
 
     if radius == 0:
         return [(center_x, center_y)]
 
+    top = (center_x, center_y - radius)
+    right = (center_x + radius, center_y)
+    bottom = (center_x, center_y + radius)
+    left = (center_x - radius, center_y)
+
+    do_top_right = 1
+    do_right_bottom = 1
+    do_bottom_left = 1
+    do_left_top = 1
+
+    for center, _, ext in sb_info:
+        if distance(top, center) <= ext and distance(right, center) <= ext:
+            do_top_right = 0
+
+        if distance(right, center) <= ext and distance(bottom, center) <= ext:
+            do_right_bottom = 0
+
+        if distance(bottom, center) <= ext and distance(left, center) <= ext:
+            do_bottom_left = 0
+
+        if distance(left, center) <= ext and distance(top, center) <= ext:
+            do_left_top = 0
+
+    # print('sides: %d' % (do_top_right + do_right_bottom + do_bottom_left + do_left_top))
+
     annulus = set()
 
-    for i in range(radius):
-        annulus.add((center_x + i, center_y - (radius - i)))
-        annulus.add((center_x + radius - i, center_y + i))
-        annulus.add((center_x - i, center_y + (radius - i)))
-        annulus.add((center_x - (radius - i), center_y - i))
+    if do_top_right:
+        for i in range(radius):
+            point = (center_x + i, center_y - (radius - i))
+            if min_x <= point[0] <= max_x and min_y <= point[1] <= max_y:
+                annulus.add(point)
+
+    if do_right_bottom:
+        for i in range(radius):
+            point = (center_x + radius - i, center_y + i)
+            if min_x <= point[0] <= max_x and min_y <= point[1] <= max_y:
+                annulus.add(point)
+
+    if do_bottom_left:
+        for i in range(radius):
+            point = (center_x - i, center_y + (radius - i))
+            if min_x <= point[0] <= max_x and min_y <= point[1] <= max_y:
+                annulus.add(point)
+
+    if do_left_top:
+        for i in range(radius):
+            point = (center_x - (radius - i), center_y - i)
+            if min_x <= point[0] <= max_x and min_y <= point[1] <= max_y:
+                annulus.add(point)
 
     return annulus
 
@@ -199,31 +265,32 @@ def find_uncovered(sb_info, min_x, min_y, max_x, max_y):
     # find all the annuli
     annuli = []
     for center, _, ext in sb_info:
-        annuli.append(find_annulus(center[0], center[1], ext + 1))
+        annuli.append(
+                find_annulus(
+                    sb_info,
+                    center[0], center[1], ext + 1,
+                    min_x, min_y, max_x, max_y))
+        # print('annulus %d' % len(annuli[-1]))
 
-    # find all the positions that are in the intersections
-    # of two annuli
-    #
-    # NOTE: we don't deal with the annuli that reach the
-    # edge of the region, but that would be a good thing
+    # find all the candidate positions that are in
+    # the intersections of two annuli
     #
     candidates = set()
     for i in range(len(annuli) - 1):
         for j in range(i + 1, len(annuli), 1):
             candidates |= annuli[i] & annuli[j]
 
-    # for each pos, see whether it is uncovered
+    # for each candidate pos, see whether it is uncovered
     #
     for pos in candidates:
-        if min_x <= pos[0] <= max_x and min_y <= pos[1] <= max_y:
-            missed = True
-            for center, _, ext in sb_info:
-                if distance(center, pos) <= ext:
-                    missed = False
-                    break
+        missed = True
+        for center, _, ext in sb_info:
+            if distance(center, pos) <= ext:
+                missed = False
+                break
 
-            if missed:
-                return pos
+        if missed:
+            return pos
 
     return None
 
