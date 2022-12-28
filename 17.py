@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 17
+"""
+
 
 import sys
 
@@ -162,32 +166,22 @@ def part1(puffs, cnt=2022):
 
 def part2(puffs, cnt=2022):
 
+    # Use recon to figure out how big the loops are,
+    # and when they've begun
+    #
     prelim_iters, iters_per_loop, height_per_loop = recon(puffs)
 
-
-    # how many rocks it takes to get into the loop
-    #
-    # if cnt is less than prelim_iters, oops
-    #
-
-    # for the test
-    #prelim_iters = 57
-    #iters_per_loop = 35
-    #height_per_loop = 53
-
-    # for the eval
-    #prelim_iters = 3429
-    #iters_per_loop = 1715
-    #height_per_loop = 2616
-
-    # create a chimney and drop the first
-    # prelim_iters rocks into it, to get
-    # things set up
+    # Create a chimney and drop the first prelim_iters rocks into it,
+    # to get things set up as they would be right before we enter
+    # into a loop
     #
     chimney = Chimney(puffs)
     for i in range(prelim_iters):
         chimney.drop()
 
+    # Figure out how many loops there will be, and what this
+    # will do to the height
+    #
     curr_height = chimney.find_max_height()
 
     elided_loops = (cnt - prelim_iters) // iters_per_loop
@@ -195,6 +189,7 @@ def part2(puffs, cnt=2022):
     remaining_rocks = (cnt - prelim_iters) % iters_per_loop
 
     # Drop the leftover rocks, and find the resulting height
+    #
     for i in range(remaining_rocks):
         chimney.drop()
 
