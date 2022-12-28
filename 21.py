@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
+"""
+Advent of Code 2022, day 21
+"""
+
 import copy
 import re
 import sys
-
-# maybe we'll need this?
-# sys.setrecursionlimit(100000)
 
 
 def reader():
@@ -47,6 +48,7 @@ def monkey_eval(monkeys, root_name):
         print('OOPS op %s %s %s' % (left_name, operator, right_name))
 
     return val
+
 
 def part2(monkeys, root_name):
 
